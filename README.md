@@ -4,10 +4,23 @@ Authdoor is reverse proxy supporting easy, accessible configuration and arbitrar
 
 Okay, authdoor allows to you create a list of auth functions.
 Authfunctions can be seperate modules? submodules within gomodules? these will be the providers.
+Authdoor creates a slice of functions, which may have data structures that are shared among multiple goroutines. The slice itself is obviously read by multiple goroutines- read.
+
+TODO:
+we need to have namespaced authlists (cookie name)
+You can also add and remove authfunc instances.
+This needs to be fleshed out, especially with waitgroups and states:
+
+The writers use the mutex to know when they can go... but for the webserver it will need to be ordered so that writers stay in transaction order (we can support transactions entirely in this model)
+We need to let the users finish their flight before we write to the stage buffer (in case they are still in it)- there should be some timeout in case someone hangs
+Write into the stage buffer and switch it up
+Remember that we can use a cookie (read: should use a cookie) to tell what auth we shoudl choose (that auth may use the cookie), if it fails, we should scroll through them one by one.
+
+If auth fails completely, if no one knows who the user is, a login page obviously needs to be presented.... we'll have to figure this.
+
 
 There also needs to be a server that will dynamically create authdoor, associate it with file servers/routers (read config and also grpc). Probably using fast http.
 
-Authdoor creates a slice of functions, which may have data structures that are shared among multiple goroutines. The slice itself is obviously read by multiple goroutines.
 
 
 
