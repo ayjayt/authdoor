@@ -1,3 +1,3 @@
-module github.com/ayjayt/router
+module github.com/ayjayt/authdoor
 
 go 1.12
