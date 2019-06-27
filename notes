@@ -1,0 +1,59 @@
+Your auth funcs might create sessions, they might check for sessions, they might just check for certain data. I'll write auth functions to check for IP, but also to check if a session is active, and if not let them log in, and then check to see if it worked out.
+
+TODO: timeouts, especially because we might redo stuff
+TODO: Add Logging
+TODO: How will we do transactions with lists
+TODO: hooks for preflight and post processing
+TODO: what kind of info can we pass back from authorization?
+TODO: configure through config or configure through gRPC
+TODOLT: use this to authorize gRPC requests
+TODOLT: provide gRPC endpoint that can respond if authorization passes
+TODOLT: how can we pass data back to gRPC back w/o protocol buffers?
+
+API:
+
+ErrNameTaken
+
+AuthStatus
+ - AuthFailed
+ - AuthGranted
+ - AuthDenied
+Responded
+TODO: Userdata
+AuthFunc - You can define new ones // (Should return any relevant user info)
+
+NewAuthFuncInstance - You can name and set a priority
+NewAuthFuncList - You can group them with a name (all names must be unique) 
+
+authFuncListCore.AddCallables - You can modify a list
+authFuncListCore.RemoveCallables - You can modify a list
+authFuncList.Cycle - after the list is modify, you can cycle all the handlers that are using it
+
+NewAuthHandler - You can create a new handler
+authHandler.GetBase (get the base http handler)
+authHandler.SetBase (set the base http handler)
+authHandler.AddInstances
+authHandler.RemoveInstances
+authHandler.AddLists
+authHandler.RemoveLists
+authHandler.ServeHTTP
+
+TODO:
+
+write NewAuthFuncList
+write call
+write AddCallables
+write RemoveCallables
+write Cycle
+write newAuthFuncListCore
+write NewAuthHandler
+write AddInstances
+write RemoveInstances
+write AddLists
+write RemoveLists
+write ServeHTTP
+
+TODO: Implement with fileserver, template, and proxy- seperate repo, private repo
+TODO: one submodule for checking ips- do submodules have their own paths- their own ops. They need it, I think.
+TODO: one submodule for just letting you in if you click a button
+
