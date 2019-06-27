@@ -13,8 +13,6 @@ const (
 	ErrNameTaken = error.New("tried to create an auth function with the same name as an existing function")
 )
 
-// TODO: decide if you're going to have the registry here
-
 // AuthStatus contains information from an AuthFunc about authorization status.
 type AuthStatus uint8
 
@@ -30,14 +28,15 @@ const (
 	AuthDenied
 )
 
-// AuthFunc is any function that takes a response writer and request and returns two state variables, AuthStatus and Responded
+// AuthFunc is any function that takes a response writer and request and returns two state variables, AuthStatus and Responded. TODO: Probably need to return some user data.
 type AuthFunc func(w http.ResponseWriter, r *http.Request) (AuthStatus, Responded)
 
+// This interface represents anything that has a call function- so a list or an instance.
 type authFuncCallable interface {
 	call(w http.ResponseWriter, r *http.Request) (AuthStatus, Responded)
 }
 
-// authFuncInstance is the structure actually used by a handler, it includes some meta data around the function
+// authFuncInstance is the structure actually used by a handler, it includes some meta data around the function. DESIGN NOTE: We don't use receiver because it makes it harder to create more concurrency issues by having multiple goroutines access the same structure.
 type authFuncInstance struct {
 	name     string
 	authFunc AuthFunc
@@ -53,9 +52,15 @@ func NewAuthFuncInstance(name string, authFunc AuthFunc, priority int) authFuncI
 	}
 }
 
-// Call does the work of calling the auth function
+// call does the work of calling the auth function. DESIGN NOTE: Originally implemented to call the function along with it's containing structures race-preventing types, I'm not sure it's the best choice now.
 func (i *authFuncInstance) call(w http.ResponseWriter, r *http.Request) (AuthStatus, Responded) {
 	return i.authFunc(w, r)
+}
+
+// authFuncContainer could be a authFuncListCore or something that inherited it. DESIGN NOTE: Different authFuncListCore wrappers would be used to implement different concurrency or data management architectures on top of the core type.
+type authFuncContainer interface {
+	AddCallables(callables ...authFuncCallable)
+	RemoveCallables(name ...string)
 }
 
 // authFuncListCore is the basic idea of a list of iterable AuthFuncs.
@@ -72,32 +77,54 @@ type authFuncList struct {
 	mutex    *sync.RWMutex  // This pointer helps us avoiding copying a mutex
 }
 
-func NewAuthFuncList() AuthFuncList {
-	// TODO: create an extenralAuthFuncList, and  return it after initializing it's mutex
+// newAuthFuncListCore will take all instances- so the values of authFuncList.funcList too- and merge everything into a new sorted authFuncList with it's own WaitGroup
+func newAuthFuncListCore(name string, instances ...authFuncCallable) authFuncListCore {
+	ret := authFuncListCore{
+		name:     name,
+		funcList: new([]authFuncInstance),
+		funcMap:  make(map[string]int),
+	}
+	ret.AddCallables(instances)
+	return ret
 }
 
+// NewAuthFuncList creates a new list that can be used as a component of a handler's list.
+func NewAuthFuncList(name string, instances ...authFuncCallable) *authFuncList {
+	ret := authFuncList{
+		authFuncListCore: newAuthFuncListCore(name, instances),
+		handlers:         new([]*authHandler),
+		mutex:            new(sync.RWMutex),
+	}
+}
+
+// call will iterate through the authFuncListCore and return when AuthStatus is Denied or Responded is true, or when it completes without finding anything.
 func (l *authFuncListCore) call(w http.ResponseWriter, r *http.Request) (AuthStatus, Responded) {
 	// TODO: iterate through the list if active and do the return or w/e
 }
 
+// AddCallables will add any AuthFuncList/Instance to it's own authFuncListCore, sorted properly.
 func (l *authFuncListCore) AddCallables(callables ...authFuncCallable) {
-	// TODO, add calables to list
+	// TODO, add callables to list
 }
 
+// RemoveCallables can remove a AuthFuncList/Instance from it's core
 func (l *authFuncListCore) RemoveCallables(names ...string) {
 	// TODO, remove callables from list
 }
 
-func (l *authFuncList) Cycle() {
-	// TODO: go through all the registered handlers and reorganize
-	// TODO: remove it from the handler if it's no longer active
+// addHandler will have the handler points to the list
+func (l *authFuncList) addHandler(handler *authHandler) {
+	// TODO
 }
 
-// TODO: does this lock inside or outside, part of transactions
+// removeHandler will have the handler NOT point to the list
+func (l *authFuncList) removeHandler(handler *authHandler) {
+	// TODO
+}
 
-// newAuthFuncListCore will take all instances- so the values of authFuncList.funcList too- and merge everything into a new sorted authFuncList with it's own WaitGroup
-func newAuthFuncListCore(name string, instances ...authFuncCallable) authFuncListCore {
-	// TODO: just create it and call add (make map)
+// UpdateHandlers will actually have the handler reorganize and rewrite the list that it is implementing
+func (l *authFuncList) UpdateHandlers() {
+	// TODO: go through all the registered handlers and reorganize
 }
 
 // authHandler is an http.Handler wrapper that manages its authorization options
@@ -105,11 +132,11 @@ type authHandler struct { // how many time will this be reused
 	base http.Handler
 	// This struct wraps the unique concurrency requirements of authHandlers. Concept is explained below the parent structures
 	authFuncs struct {
-		activeLists    [2]authFuncListCore         // the lists actually being used
-		currentListWg  [2]sync.WaitGroup           // for tracking readers
-		currentList    int                         // for directing readers
-		mutex          sync.Mutex                  // for writing
-		componentsList map[string]authFuncListCore // for default and external lists
+		activeLists    [2]authFuncListCore      // the lists actually being used
+		currentListWg  [2]sync.WaitGroup        // for tracking readers
+		currentList    int                      // for directing readers
+		mutex          sync.Mutex               // for writing
+		componentsList map[string]*authFuncList // for default and external lists
 	}
 }
 

@@ -27,7 +27,7 @@ NewAuthFuncList - You can group them with a name (all names must be unique)
 
 authFuncListCore.AddCallables - You can modify a list
 authFuncListCore.RemoveCallables - You can modify a list
-authFuncList.Cycle - after the list is modify, you can cycle all the handlers that are using it
+authFuncList.UpdateHandlers - after the list is modify, you can cycle all the handlers that are using it
 
 NewAuthHandler - You can create a new handler
 authHandler.GetBase (get the base http handler)
@@ -36,6 +36,7 @@ authHandler.AddInstances
 authHandler.RemoveInstances
 authHandler.AddLists
 authHandler.RemoveLists
+authHandler.UpdateActiveList
 authHandler.ServeHTTP
 
 TODO:
@@ -44,6 +45,8 @@ write NewAuthFuncList
 write call
 write AddCallables
 write RemoveCallables
+write addHandlers
+write removeHandlers
 write Cycle
 write newAuthFuncListCore
 write NewAuthHandler
@@ -51,9 +54,35 @@ write AddInstances
 write RemoveInstances
 write AddLists
 write RemoveLists
+write UpdateActiveList
 write ServeHTTP
 
 TODO: Implement with fileserver, template, and proxy- seperate repo, private repo
 TODO: one submodule for checking ips- do submodules have their own paths- their own ops. They need it, I think.
 TODO: one submodule for just letting you in if you click a button
 
+CONCEPTS:
+
+Primitives:
+
+AuthFuncs - these may be copied or may be pointed to, who knows. I guerss it could get more complex if they're generated with closures.
+Instances - a structure that contains the authfuncinstance. maybe it would be better if the authfunc was a receiver. that way the authfuncinstance could be refered to... but then by multiple goroutines and it would need to be managed. generally these are write once, generated a new one if you want it.
+Lists - Lists contain lists of instances. They can be modified at runtime. Therefore they should only be written by one person at a time. For a global list, we use a RWMutex, so you can read and write correctly. It could be better, it should be writes always get priority. Lists point to the handlers that use them, since if we modify the list we may need to go through the handlers. Therefore, if the handler adds the list, it should append it to the list. Here's the intractable issue.If we want the lists to be modifiable at runtime (which is why they are concurrency safe), we have to know
+a) if we remove the list from the handler, the list/handler association is removed
+b) if we add a list to a handler, the list/handler association is created 
+c) if we modify a list, it's handlers need to be told to recycle
+
+So, there needs to at least be an instance for each list that is the "main" instance, the reference for any copies. So we can copy it into the handler or point to it. In the copy, we need to add the handler using it to it's list of handlers. If we remove it, we don't need to remove it from the list, because we can detect whether or not it's removed when we try to recycle the handler. In a way, the handler is subscribing to changes. That's fine because handler is pointer by default. Okay, so to have the hnadler access the "main list", we could use a map of global lists and give each one a unique name. I don't like that, but it would prevent pointers. Or we could point to the list. I think that's what we're going to do. But a map of pointers is bad. So you could reference them both by map, okee. 
+Handlers - the handler uses a pointer, since it contains concurrency objects we want to prevent copies of. We avoiding any instance of pass-by-copy accidently since we're defaulting to a pointer. You'd have to do it intentionally..
+
+
+Okay, the handlers and lists point to each other. So when you add a list to a handler, it shoudl point to that list. And the list should point to the handler. When you remove a 
+Long to do:
+The next iteration adds a basic click-to-auth
+The next iteration will use it to serve
+Then:
+healthy restart
+w/ grpc:
+run-time modifying lists
+run-time modifyable paths
+layer for grpc auditing
