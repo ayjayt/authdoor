@@ -41,14 +41,13 @@ authHandler.ServeHTTP
 
 TODO:
 
-write NewAuthFuncList
-write call
 write AddCallables
+write nextHighest (really?)- or just writeSlice
+write writeSlice
 write RemoveCallables
 write addHandlers
 write removeHandlers
 write Cycle
-write newAuthFuncListCore
 write NewAuthHandler
 write AddInstances
 write RemoveInstances
@@ -86,3 +85,44 @@ w/ grpc:
 run-time modifying lists
 run-time modifyable paths
 layer for grpc auditing
+
+tests (design)
+integration tests
+
+this thing was a fuckin nightmare
+
+
+okay, i have a sorted array
+i want to insert
+i want to remove
+i don't want it to be absurd
+
+maybe i should sort what i have
+
+take it, write out a tree
+
+so traversing might be slower if its an array
+
+what we can do is sort what we need to insert first
+then we start going through our list, and when we encounter something that needs to be inserted
+we start building a linked list off of it
+
+
+functions are moved by reference/pointer
+if you move it into an interface, is it copied or is it passed by pointer
+
+
+
+If you are the left, the parent is always larger, your brother is always larger than both
+Your right is always larger than you, your left is always smaller than you, both are smaller than the parent
+
+If you are the right, the parent is always smaller, your brother is always smaller than both
+Your left is smaller than you, but larger than your parent, your right is larger than most.
+
+If you're the left, the next larger is always your right's left most children.
+If you have no right, the next largest is your parent.
+
+If you're the right, the next larger is always your right's left most children.
+If you have no right, the next largest is the next right off your parent.
+
+start with the left-most, then go up, that's your' next,	

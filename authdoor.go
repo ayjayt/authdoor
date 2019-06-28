@@ -68,6 +68,7 @@ type authFuncListCore struct {
 	name     string
 	funcList []authFuncInstance
 	funcMap  map[string]int // cornelk/hashmap would be faster
+	wg       sync.WaitGroup // for tracking readers
 }
 
 // authFuncList provides concurency support to authFuncList.
@@ -80,9 +81,7 @@ type authFuncList struct {
 // newAuthFuncListCore will take all instances- so the values of authFuncList.funcList too- and merge everything into a new sorted authFuncList with it's own WaitGroup
 func newAuthFuncListCore(name string, instances ...authFuncCallable) authFuncListCore {
 	ret := authFuncListCore{
-		name:     name,
-		funcList: new([]authFuncInstance),
-		funcMap:  make(map[string]int),
+		name: name,
 	}
 	ret.AddCallables(instances)
 	return ret
@@ -99,17 +98,75 @@ func NewAuthFuncList(name string, instances ...authFuncCallable) *authFuncList {
 
 // call will iterate through the authFuncListCore and return when AuthStatus is Denied or Responded is true, or when it completes without finding anything.
 func (l *authFuncListCore) call(w http.ResponseWriter, r *http.Request) (AuthStatus, Responded) {
-	// TODO: iterate through the list if active and do the return or w/e
+	// If we had a hint about which to call we could
+	for i, _ := range l.funcList {
+		status, responded := l.funcList[i](w, r)
+		if (status == AuthDenied) || (Responded) {
+			return status, responded
+		}
+	}
+}
+
+// btreeNode is a simple datastructure used to expedite sorting.
+type btreeNode struct {
+	item                *authFuncInstance
+	parent, left, right *list
+	size                int // only the root node would contain the size, will never be 0 if authFuncCallable != nil
+}
+
+// insert will place an authFuncInstance in the btree by order of priority
+func (n *btreeNode) insert(*authFuncInstance) {
+	if (n.size != 0) || parent == nil {
+		size++
+	}
+	if n.item == nil {
+		n.item = authFuncCallable
+		return
+	}
+	if n.item.priority > authFuncInstance.priority {
+		if n.left == nil {
+			n.left = &btreeNode{parent: n}
+		}
+		n.left.insert(authFuncInstance)
+		return
+	}
+	if n.right == nil {
+		n.right = &btreeNode{parent: n}
+	}
+	n.right.insert(authFuncInstance)
+}
+
+func (n *btreeNode) min() *breeNode {
+	if n.left == nil {
+		return n
+	}
+	return n.left.min()
+}
+
+func (n *btreeNode) nextHighest() *btreeNode {
+	// if left
+	// if right
+	// gosh which way do we go
+	if n.right != nil {
+		return n.right.min()
+	}
+	n.parent.nextHighest
+}
+
+func (n *btreeNode) writeSlice(slice []authFuncInstance) {
+	return nil
 }
 
 // AddCallables will add any AuthFuncList/Instance to it's own authFuncListCore, sorted properly.
 func (l *authFuncListCore) AddCallables(callables ...authFuncCallable) {
-	// TODO, add callables to list
+	// build tree out of all and build slice
 }
 
 // RemoveCallables can remove a AuthFuncList/Instance from it's core
 func (l *authFuncListCore) RemoveCallables(names ...string) {
 	// TODO, remove callables from list
+	// first, make them nil by name
+	// then loop through moving it over to the left
 }
 
 // addHandler will have the handler points to the list
@@ -132,8 +189,8 @@ type authHandler struct { // how many time will this be reused
 	base http.Handler
 	// This struct wraps the unique concurrency requirements of authHandlers. Concept is explained below the parent structures
 	authFuncs struct {
-		activeLists    [2]authFuncListCore      // the lists actually being used
-		currentListWg  [2]sync.WaitGroup        // for tracking readers
+		activeLists [2]authFuncListCore // the lists actually being used
+
 		currentList    int                      // for directing readers
 		mutex          sync.Mutex               // for writing
 		componentsList map[string]*authFuncList // for default and external lists
