@@ -42,9 +42,8 @@ authHandler.ServeHTTP
 TODO:
 
 
-write ServeHTTP
-
 go through and determine what's going to block and what's not- todo w/ timeouts
+
 go through an activate mutexes properly
 split it into multiple files?
 outline and write tests
