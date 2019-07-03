@@ -3,9 +3,12 @@ package authdoor
 import (
 	"error"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -57,18 +60,27 @@ func (i *authFuncInstance) call(w http.ResponseWriter, r *http.Request) (AuthSta
 	return i.authFunc(w, r)
 }
 
-// authFuncContainer could be a authFuncListCore or something that inherited it. DESIGN NOTE: Different authFuncListCore wrappers would be used to implement different concurrency or data management architectures on top of the core type.
-type authFuncContainer interface {
-	AddCallables(callables ...authFuncCallable)
-	RemoveCallables(name ...string)
-}
-
 // authFuncListCore is the basic idea of a list of iterable AuthFuncs.
 type authFuncListCore struct {
 	name     string
-	funcList []authFuncInstance
-	funcMap  map[string]int // cornelk/hashmap would be faster
-	wg       sync.WaitGroup // for tracking readers
+	funcList []authFuncInstance // these are copied, and this needs to be reordered
+	funcMap  map[string]int     // cornelk/hashmap would be faster
+	wg       sync.WaitGroup     // for tracking readers
+}
+
+func (c *authFuncListCore) Len() int {
+	return len(c.funcList)
+}
+func (c *authFuncListCore) Swap(i, j int) {
+	c.funcList[i], c.funcList[j] = c.funcList[j], c.funcList[i]
+}
+func (c *authFuncListCore) Less(i, j int) bool {
+	c.funcList[i].priority < c.funcList[j].priority
+}
+func (c *authFuncListCore) WriteMap() {
+	for i, _ := range c.funcList {
+		c.funcMap[funcList[i].name] = i
+	}
 }
 
 // authFuncList provides concurency support to authFuncList.
@@ -79,12 +91,12 @@ type authFuncList struct {
 }
 
 // newAuthFuncListCore will take all instances- so the values of authFuncList.funcList too- and merge everything into a new sorted authFuncList with it's own WaitGroup
-func newAuthFuncListCore(name string, instances ...authFuncCallable) authFuncListCore {
+func newAuthFuncListCore(name string, instances ...authFuncCallable) (authFuncListCore, error) {
 	ret := authFuncListCore{
 		name: name,
 	}
-	ret.AddCallables(instances)
-	return ret
+	err := ret.AddCallables(instances)
+	return ret, err
 }
 
 // NewAuthFuncList creates a new list that can be used as a component of a handler's list.
@@ -107,66 +119,47 @@ func (l *authFuncListCore) call(w http.ResponseWriter, r *http.Request) (AuthSta
 	}
 }
 
-// btreeNode is a simple datastructure used to expedite sorting.
-type btreeNode struct {
-	item                *authFuncInstance
-	parent, left, right *list
-	size                int // only the root node would contain the size, will never be 0 if authFuncCallable != nil
-}
-
-// insert will place an authFuncInstance in the btree by order of priority
-func (n *btreeNode) insert(*authFuncInstance) {
-	if (n.size != 0) || parent == nil {
-		size++
-	}
-	if n.item == nil {
-		n.item = authFuncCallable
-		return
-	}
-	if n.item.priority > authFuncInstance.priority {
-		if n.left == nil {
-			n.left = &btreeNode{parent: n}
-		}
-		n.left.insert(authFuncInstance)
-		return
-	}
-	if n.right == nil {
-		n.right = &btreeNode{parent: n}
-	}
-	n.right.insert(authFuncInstance)
-}
-
-func (n *btreeNode) min() *breeNode {
-	if n.left == nil {
-		return n
-	}
-	return n.left.min()
-}
-
-func (n *btreeNode) nextHighest() *btreeNode {
-	// if left
-	// if right
-	// gosh which way do we go
-	if n.right != nil {
-		return n.right.min()
-	}
-	n.parent.nextHighest
-}
-
-func (n *btreeNode) writeSlice(slice []authFuncInstance) {
-	return nil
-}
-
 // AddCallables will add any AuthFuncList/Instance to it's own authFuncListCore, sorted properly.
-func (l *authFuncListCore) AddCallables(callables ...authFuncCallable) {
+func (l *authFuncListCore) AddCallables(callables ...authFuncCallable) error {
 	// build tree out of all and build slice
+	for i, _ := range callables {
+		switch callables[i].(type) { // There needs to be a better way...
+		case authFuncListCore:
+			fallthrough
+		case authFuncList:
+			for j, _ = range callables[i].funcList {
+				if _, ok := l.funcMap[callables[i].funcList[j].name]; ok {
+					return errors.Wrap(ErrNameTaken, callables[i].funcList[j].name)
+				}
+			}
+			authFuncListCore.funcList = append(authFuncListCore.funcList, callables[i].funcList...)
+		case authFuncInstance:
+			authFuncListCore.funcList = append(authFuncListCore.funcList, callables[i])
+		}
+	}
+	sort.Sort(l)
+	l.WriteMap()
+	return nil
 }
 
 // RemoveCallables can remove a AuthFuncList/Instance from it's core
 func (l *authFuncListCore) RemoveCallables(names ...string) {
-	// TODO, remove callables from list
-	// first, make them nil by name
-	// then loop through moving it over to the left
+	for i, _ := range names {
+		l.funcList[l.funcMap[names[i]]].authFunc = nil
+	}
+	zombieCounter := 0
+	newSize := 0
+	for i, _ := range l.funcList {
+		if l.funcList[i].authFunc == nil {
+			zombieCounter++
+		} else {
+			newSize++
+			if zombieCounter > 0 {
+				l.funcList[i-zombieCounter] = l.funcList[i]
+			}
+		}
+	}
+	l.funcList = l.funcList[:newSize] // could be an error
 }
 
 // addHandler will have the handler points to the list
