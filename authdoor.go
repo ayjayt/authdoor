@@ -103,8 +103,8 @@ func newAuthFuncListCore(name string, instances ...authFuncCallable) (authFuncLi
 func NewAuthFuncList(name string, instances ...authFuncCallable) *authFuncList {
 	ret := authFuncList{
 		authFuncListCore: newAuthFuncListCore(name, instances),
-		handlers:         new([]*authHandler),
-		mutex:            new(sync.RWMutex),
+		handlers:         new([]*authHandler), // records all handlers
+		mutex:            new(sync.RWMutex),   // we're not using this yet
 	}
 }
 
@@ -124,9 +124,7 @@ func (l *authFuncListCore) AddCallables(callables ...authFuncCallable) error {
 	// build tree out of all and build slice
 	for i, _ := range callables {
 		switch callables[i].(type) { // There needs to be a better way...
-		case authFuncListCore:
-			fallthrough
-		case authFuncList:
+		case authFuncList, authFuncListCore:
 			for j, _ = range callables[i].funcList {
 				if _, ok := l.funcMap[callables[i].funcList[j].name]; ok {
 					return errors.Wrap(ErrNameTaken, callables[i].funcList[j].name)
@@ -162,23 +160,43 @@ func (l *authFuncListCore) RemoveCallables(names ...string) {
 	l.funcList = l.funcList[:newSize] // could be an error
 }
 
-// addHandler will have the handler points to the list
+// addHandler will have the handler points to the list, intended to be called by authHandler.AddLists().
 func (l *authFuncList) addHandler(handler *authHandler) {
-	// TODO
+	l.handlers = append(l.handlers, handler)
 }
 
-// removeHandler will have the handler NOT point to the list
+// removeHandler will remove the handlers from the list, intended to be called by authHandler.RemoveLists()
 func (l *authFuncList) removeHandler(handler *authHandler) {
-	// TODO
+	for i, _ := range l.handlers {
+		if l.handlers[i] == handler {
+			l.handlers[len(l.handlers)-1], l.handlers[i] = nil, l.handlers[len(l.handlers)-1]
+			l.handlers = l.handlers[:len(l.handlers)-1]
+			return
+		}
+	}
 }
 
 // UpdateHandlers will actually have the handler reorganize and rewrite the list that it is implementing
 func (l *authFuncList) UpdateHandlers() {
-	// TODO: go through all the registered handlers and reorganize
+	totalHandlers = len(l.handlers)
+	handlerComplete := make(chan int, 5)
+	for i, _ := range l.handlers {
+		go func() {
+			l.handlers[i].UpdateActiveList()
+			handlerComplete <- 1
+		}()
+	}
+	var handlersComplete int
+	for i := range handlerComplete {
+		handlersComplete += i
+		if handlersComplete == totalHandlers {
+			return
+		}
+	}
 }
 
 // authHandler is an http.Handler wrapper that manages its authorization options
-type authHandler struct { // how many time will this be reused
+type authHandler struct {
 	base http.Handler
 	// This struct wraps the unique concurrency requirements of authHandlers. Concept is explained below the parent structures
 	authFuncs struct {
@@ -193,10 +211,23 @@ type authHandler struct { // how many time will this be reused
 // CONCEPT: this lets us build up a new authFuncListCore based off a modified componentsList. Doing anything requires you to hold the Mutex, then you make the switch. Hold the Mutex and wait for the WaitGroup on the buffer you want to be 0.
 
 // NewAuthHandler sets the base http.Handler
-func NewAuthHandler(handler http.Handler, instances ...authFuncCallable) *authHandler {
+func NewAuthHandler(handler http.Handler, callables ...authFuncCallable) *authHandler {
 	h := &authHandler{base: handler, authFuncs.mutex: new(sync.Mutex)}
-	// TODO: propogate authFuncList if not null
-} // Pointer here is important since we only want one, both for the Mutex and also to deal with the Lists pointing to it.
+	h.authFuncs.componentsList = make(map[string]*authFuncList)
+	h.authFuncs.componentsList[""] = NewAuthFuncList("")
+	for i, _ := range callables {
+		switch callables[i].(type) {
+		case authFuncListCore:
+			// TODO: silent error woops- add it to instances?
+		case authFuncList:
+			h.AddLists(callables[i])
+		case authFuncInstance:
+			h.AddInstances(callables[i])
+		}
+	}
+	h.UpdateActiveList()
+	return h
+}
 
 // GetBase returns the underlying http.Handler
 func (h *authHandler) GetBase() http.Handler {
@@ -208,27 +239,70 @@ func (h *authHandler) SetBase(handler http.Handler) {
 	h.base = handler
 }
 
-func (h *authHandler) AddInstances(instances ...authFuncInstance) {
-	// TODO, add an instance to your basic list
+func (h *authHandler) AddInstances(instances ...authFuncInstance) error {
+	for i, _ := range instances {
+		if _, ok := h.authFuncs.componentsList[""].funcMap[instances[i].name]; ok {
+			return errors.Wrap(ErrNameTaken, instances[i].name)
+		}
+		h.authFuncs.componentsList[""].AddCallables(instances)
+		return nil
+	}
 }
 
 func (h *authHandler) RemoveInstances(instanceNames ...string) {
-	// TODO, remove an instance from your basic list
+	h.authFuncs.componentsList[""].RemoveCallables(instances)
 }
 
-func (h *authHandler) AddLists(lists ...authFuncList) {
-	// TODO, add a list to your list of lists
+func (h *authHandler) AddLists(lists ...authFuncList) error {
+	for i, _ := range lists {
+		if _, ok := h.authFuncs.componentsList[lists[i].name]; ok {
+			return errors.Wrap(ErrNameTaken, lists[i].name)
+		}
+		h.authFuncs.componentsList[lists[i].name] = lists[i]
+		lists[i].addHandler(h)
+		return nil
+	}
 }
 
 func (h *authHandler) RemoveLists(listNames ...string) {
-	// TODO, remove a list from your list of lists
+	for _, v := range listNames {
+		h.authFuncs.componentsList[v].removeHandler(h)
+		delete(h.authFuncs.componentsList, v)
+	}
+
 }
 
 func (h *authHandler) UpdateActiveList() {
-	// TODO now reset lists
+	// TODO: wait groups?
+	h.authFuncs.mutex.Lock()
+	componentsListSlice := make([]*authFuncList, len(h.authFuncs.componentsList))
+	i := 0
+	for k, _ := range h.authFuncs.componentsList {
+		componentsListSlice[i] = h.authFuncs.componentsList[k]
+		i++
+	}
+	h.authFuncs.activeLists[1-h.authFuncs.currentList] = newAuthFuncListCore("", componentsListSlice...)
+	h.authFuncs.currentList = 1 - h.authFuncs.currentList
+	h.authFuncs.mutex.Unlock()
 }
 func (h *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// TODO: range through Auth, generally
 	// TODO: CORS- see authHandler todo0 we should have like a preflight function we can assign
-	h.base.ServeHTTP()
+	currentList := -1
+	for currentList != h.authFuncs.currentList {
+		currentList := h.authFuncs.currentList
+		h.authFuncs.activeLists[currentList].wg.Add()
+		if h.authFuncs.currentList != currentList {
+			currentList = -1
+			h.authFuncs.activeLists[currentList].wg.Done() // this doesn't work
+			continue
+		}
+		for i, _ := range h.authFuncs.activeLists[currentList].funcList {
+			ret, ans := h.authFuncs.activeLists[currentList].funcList[i].call()
+			if (ret == AccessGranted) && (!ans) {
+				h.base.ServeHTTP()
+				return
+			}
+		}
+	}
 }
