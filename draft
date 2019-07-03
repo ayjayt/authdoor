@@ -1,0 +1,23 @@
+I've added run-time configuration of multiplexing and arbitrary authorization for Golang's stdlib HTTP handlers- reverse proxies, fileservers, and templates.
+
+In layman's terms: You can add and remove URLs to your website very easily and place them behind things like googles, githubs, etc's single-sign-on authorization. It's a wrapper for golang's standard library, so it should fit in very well with other golang workflows.
+
+At face value, it's a simple program. However, by allowing hot-swapping of path and authorization configuration of golang standard library HTTP handlers, we need to account for extremely lopsided conccurent access patterns. This means 
+Section A) picking the right basic datastructure
+Section B) if the datastructure isn't naturally concurrent-safe**, then the basic object needs to be adorned with protection for race conditions.
+
+** it's not- it's neither based on OT or CRDT, although that would be great to generate lock free datastructures! Next time!
+
+A)
+
+We want to suffer as many reads as golang will allow with it's stdlib. We work hard to avoid
+a) allocation in hotpaths
+b) > O(1) read times.
+	 
+ Since reconfiguration of the paths should occur only occasionally (at most a couple times a day?) I want with the most lopsided and simplest thing I could think of:
+The authorization functions are kept in an array, and iterated through normally. During write, we use golang's stdlib quicksort. Anticlimactic, right? Sorry, no redblack tree today :-)
+	  
+		 
+B)
+
+ We decided to implement the basic list and use it's `type struct` as an anonymous member of other `type struct`s that implement the race-aware mechanisms (waitgroups and mutexes) 
