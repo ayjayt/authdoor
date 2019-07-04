@@ -35,6 +35,15 @@ add logs
 write tests
 look at race condition testing
 
+What we can do: add and remove lists, add and remove instances from lists. But we can't change paths yet. That's almost more important. I guess I have no idea what I'm building. So it needs this first with config, then with GRPC. Uhh then I can do an implementation. It needs to save config too.
+
+First implement it statically with julienschmidt/httprouter
+Get your splash page up
+Then fix auditmatic
+Then implement a firewall
+Then make sure that julienschmidt/httprouter is safe for concurrent write/reads
+Then load it from config
+Then modify config with GRPC (and add command line for this)- be able to write it and stuff
 
 
 CONCEPTS:
