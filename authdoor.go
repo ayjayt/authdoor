@@ -68,28 +68,6 @@ type authFuncListCore struct {
 	wg       sync.WaitGroup     // for tracking readers
 }
 
-func (c *authFuncListCore) Len() int {
-	return len(c.funcList)
-}
-func (c *authFuncListCore) Swap(i, j int) {
-	c.funcList[i], c.funcList[j] = c.funcList[j], c.funcList[i]
-}
-func (c *authFuncListCore) Less(i, j int) bool {
-	c.funcList[i].priority < c.funcList[j].priority
-}
-func (c *authFuncListCore) WriteMap() {
-	for i, _ := range c.funcList {
-		c.funcMap[funcList[i].name] = i
-	}
-}
-
-// authFuncList provides concurency support to authFuncList.
-type authFuncList struct {
-	authFuncListCore
-	handlers []*authHandler // No way around this pointer
-	mutex    *sync.RWMutex  // This pointer helps us avoiding copying a mutex
-}
-
 // newAuthFuncListCore will take all instances- so the values of authFuncList.funcList too- and merge everything into a new sorted authFuncList with it's own WaitGroup
 func newAuthFuncListCore(name string, instances ...authFuncCallable) (authFuncListCore, error) {
 	ret := authFuncListCore{
@@ -99,16 +77,30 @@ func newAuthFuncListCore(name string, instances ...authFuncCallable) (authFuncLi
 	return ret, err
 }
 
-// NewAuthFuncList creates a new list that can be used as a component of a handler's list.
-func NewAuthFuncList(name string, instances ...authFuncCallable) *authFuncList {
-	ret := authFuncList{
-		authFuncListCore: newAuthFuncListCore(name, instances),
-		handlers:         new([]*authHandler), // records all handlers
-		mutex:            new(sync.RWMutex),   // we're not using this yet
+// Len returns the lenfth of the object to be sorted (used by sort.Sort)
+func (c *authFuncListCore) Len() int {
+	return len(c.funcList)
+}
+
+// Swap swaps the two objects by index (used by sort.Sort)
+func (c *authFuncListCore) Swap(i, j int) {
+	c.funcList[i], c.funcList[j] = c.funcList[j], c.funcList[i]
+}
+
+// Less is a comparison operator used by sort.Sort
+func (c *authFuncListCore) Less(i, j int) bool {
+	c.funcList[i].priority < c.funcList[j].priority
+}
+
+// WriteMap constructs the funcMap (to be used after sorting) which is used to quickly map a name of a AuthFunc to its index.
+func (c *authFuncListCore) WriteMap() {
+	for i, _ := range c.funcList {
+		c.funcMap[funcList[i].name] = i
 	}
 }
 
 // call will iterate through the authFuncListCore and return when AuthStatus is Denied or Responded is true, or when it completes without finding anything.
+
 func (l *authFuncListCore) call(w http.ResponseWriter, r *http.Request) (AuthStatus, Responded) {
 	// If we had a hint about which to call we could
 	for i, _ := range l.funcList {
@@ -160,6 +152,22 @@ func (l *authFuncListCore) RemoveCallables(names ...string) {
 	l.funcList = l.funcList[:newSize] // could be an error
 }
 
+// authFuncList provides concurency support to authFuncList.
+type authFuncList struct {
+	authFuncListCore
+	handlers []*authHandler // No way around this pointer
+	mutex    *sync.RWMutex  // This pointer helps us avoiding copying a mutex
+}
+
+// NewAuthFuncList creates a new list that can be used as a component of a handler's list.
+func NewAuthFuncList(name string, instances ...authFuncCallable) *authFuncList {
+	ret := authFuncList{
+		authFuncListCore: newAuthFuncListCore(name, instances),
+		handlers:         new([]*authHandler), // records all handlers
+		mutex:            new(sync.RWMutex),   // we're not using this yet
+	}
+}
+
 // addHandler will have the handler points to the list, intended to be called by authHandler.AddLists().
 func (l *authFuncList) addHandler(handler *authHandler) {
 	l.handlers = append(l.handlers, handler)
@@ -177,15 +185,38 @@ func (l *authFuncList) removeHandler(handler *authHandler) {
 }
 
 // UpdateHandlers will actually have the handler reorganize and rewrite the list that it is implementing
-func (l *authFuncList) UpdateHandlers() {
+func (l *authFuncList) UpdateHandlers() (chan int, int) {
 	totalHandlers = len(l.handlers)
-	handlerComplete := make(chan int, 5)
+	completionNotifier := make(chan int, totalHandlers)
 	for i, _ := range l.handlers {
 		go func() {
-			l.handlers[i].UpdateActiveList()
-			handlerComplete <- 1
+			lockNeeded := authHandler.startLock
+			if lockNeeded {
+				l.handlers[i].UpdateActiveList()
+				authHandler.endLock
+			}
+			completionNotifier <- 1
 		}()
 	}
+	return completionNotfier, totalHandlers
+}
+
+// UpdateHandler is UpdateHandlers for one handler
+func (l *authFuncList) UpdateHandlers(handler *authHandler) (chan int, int) {
+	completionNotifier := make(chan int, 1)
+	go func() {
+		lockNeeded := authHandler.startLock
+		if lockNeeded {
+			authHandler.UpdateActiveList()
+			authHandler.endLock
+		}
+		completionNotifier <- 1
+	}()
+	return completionNotfier, 1
+}
+
+// BlockForUpdate will wait for all the handlers to update- may be unnecessary
+func (l *authFuncList) BlockForUpdate(completionNotifer chan int, totalHandlers int) {
 	var handlersComplete int
 	for i := range handlerComplete {
 		handlersComplete += i
@@ -200,8 +231,8 @@ type authHandler struct {
 	base http.Handler
 	// This struct wraps the unique concurrency requirements of authHandlers. Concept is explained below the parent structures
 	authFuncs struct {
-		activeLists [2]authFuncListCore // the lists actually being used
-
+		activeLists    [2]authFuncListCore // the lists actually being used
+		toUpdate       bool
 		currentList    int                      // for directing readers
 		mutex          sync.Mutex               // for writing
 		componentsList map[string]*authFuncList // for default and external lists
@@ -272,9 +303,25 @@ func (h *authHandler) RemoveLists(listNames ...string) {
 
 }
 
-func (h *authHandler) UpdateActiveList() {
-	// TODO: wait groups?
+// startLock is used to set updating as a priority and lock it. It returns false if the lock wasn't required as update was deemed redundant.
+func (h *authHandler) startLock() bool {
+	h.authFuncs.toUpdate = true
 	h.authFuncs.mutex.Lock()
+	if !h.authFuncs.toUpdate {
+		h.authFuncs.mutex.Unlock()
+		return false
+	}
+	h.authFuncs.toUpdate = false // corner case race condition with no negative impact. Could set to true right after this before we update, and then we don't really need to update but its neglibile issue.
+	return true
+}
+
+// endLock is used to unlcok the mutex
+func (h *authHandler) endLock() {
+	h.authFuncs.mutex.Unlock()
+}
+
+func (h *authHandler) UpdateActiveList() {
+	h.authFuncs.activeLists[1-currentList].wg.Wait()
 	componentsListSlice := make([]*authFuncList, len(h.authFuncs.componentsList))
 	i := 0
 	for k, _ := range h.authFuncs.componentsList {
@@ -283,26 +330,29 @@ func (h *authHandler) UpdateActiveList() {
 	}
 	h.authFuncs.activeLists[1-h.authFuncs.currentList] = newAuthFuncListCore("", componentsListSlice...)
 	h.authFuncs.currentList = 1 - h.authFuncs.currentList
-	h.authFuncs.mutex.Unlock()
 }
 func (h *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// TODO: range through Auth, generally
 	// TODO: CORS- see authHandler todo0 we should have like a preflight function we can assign
+	// TODO: awful structure
 	currentList := -1
 	for currentList != h.authFuncs.currentList {
 		currentList := h.authFuncs.currentList
 		h.authFuncs.activeLists[currentList].wg.Add()
 		if h.authFuncs.currentList != currentList {
+			h.authFuncs.activeLists[currentList].wg.Done()
 			currentList = -1
-			h.authFuncs.activeLists[currentList].wg.Done() // this doesn't work
 			continue
 		}
 		for i, _ := range h.authFuncs.activeLists[currentList].funcList {
 			ret, ans := h.authFuncs.activeLists[currentList].funcList[i].call()
 			if (ret == AccessGranted) && (!ans) {
 				h.base.ServeHTTP()
+				h.authFuncs.activeLists[currentList].wg.Done()
 				return
 			}
 		}
+		h.authFuncs.activeLists[currentList].wg.Done()
+		return
 	}
+	return // should never get here eh
 }

@@ -42,12 +42,10 @@ authHandler.ServeHTTP
 TODO:
 
 
-go through and determine what's going to block and what's not- todo w/ timeouts
-
-go through an activate mutexes properly
-split it into multiple files?
-outline and write tests
-okay now we're barely caught up
+outline tests
+fix comments
+write tests
+look at race conditions
 
 
 build the profiler
