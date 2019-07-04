@@ -42,8 +42,8 @@ authHandler.ServeHTTP
 TODO:
 
 
-outline tests
 fix comments
+add logs
 write tests
 look at race conditions
 

@@ -5,8 +5,23 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 )
+
+// we can inject a logger like github.com/go-logr/zapr if we want
+var logger logr.Logger
+
+func init() {
+	if logger == nil {
+		logger = &emptyLogger{}
+	}
+}
+
+// SetLogger allows you set a logger like github.com/go-logr/zapr
+func SetLogger(logger logr.Logger) {
+	logger = logger
+}
 
 var (
 	// ErrNameTaken is returned when someone tries to register an auth method on a handler that already exists
