@@ -1,15 +1,3 @@
-Your auth funcs might create sessions, they might check for sessions, they might just check for certain data. I'll write auth functions to check for IP, but also to check if a session is active, and if not let them log in, and then check to see if it worked out.
-
-TODO: timeouts, especially because we might redo stuff
-TODO: Add Logging
-TODO: How will we do transactions with lists
-TODO: hooks for preflight and post processing
-TODO: what kind of info can we pass back from authorization?
-TODO: configure through config or configure through gRPC
-TODOLT: use this to authorize gRPC requests
-TODOLT: provide gRPC endpoint that can respond if authorization passes
-TODOLT: how can we pass data back to gRPC back w/o protocol buffers?
-
 API:
 
 ErrNameTaken
@@ -45,14 +33,9 @@ TODO:
 fix comments
 add logs
 write tests
-look at race conditions
+look at race condition testing
 
 
-build the profiler
-
-TODO: Implement with fileserver, template, and proxy- seperate repo, private repo
-TODO: one submodule for checking ips- do submodules have their own paths- their own ops. They need it, I think.
-TODO: one submodule for just letting you in if you click a button
 
 CONCEPTS:
 
@@ -68,55 +51,22 @@ Note: we don't really want to reread the list anytime any par tof the configurat
 So, there needs to at least be an instance for each list that is the "main" instance, the reference for any copies. So we can copy it into the handler or point to it. In the copy, we need to add the handler using it to it's list of handlers. If we remove it, we don't need to remove it from the list, because we can detect whether or not it's removed when we try to recycle the handler. In a way, the handler is subscribing to changes. That's fine because handler is pointer by default. Okay, so to have the hnadler access the "main list", we could use a map of global lists and give each one a unique name. I don't like that, but it would prevent pointers. Or we could point to the list. I think that's what we're going to do. But a map of pointers is bad. So you could reference them both by map, okee. 
 Handlers - the handler uses a pointer, since it contains concurrency objects we want to prevent copies of. We avoiding any instance of pass-by-copy accidently since we're defaulting to a pointer. You'd have to do it intentionally..
 
+TODO: 
 
-Okay, the handlers and lists point to each other. So when you add a list to a handler, it shoudl point to that list. And the list should point to the handler. When you remove a 
-Long to do:
-The next iteration adds a basic click-to-auth
-The next iteration will use it to serve
-Then:
-healthy restart
-w/ grpc:
-run-time modifying lists
-run-time modifyable paths
-layer for grpc auditing
+build the profiler
 
-tests (design)
-integration tests
+TODO: Implement with fileserver, template, and proxy- seperate repo, private repo
+TODO: one submodule for checking ips- do submodules have their own paths- their own ops. They need it, I think.
+TODO: one submodule for just letting you in if you click a button
+Your auth funcs might create sessions, they might check for sessions, they might just check for certain data. I'll write auth functions to check for IP, but also to check if a session is active, and if not let them log in, and then check to see if it worked out.
 
-this thing was a fuckin nightmare
+TODO: timeouts, especially because we might redo stuff
+TODO: Add Logging
+TODO: How will we do transactions with lists
+TODO: hooks for preflight and post processing
+TODO: what kind of info can we pass back from authorization?
+TODO: configure through config or configure through gRPC
+TODOLT: use this to authorize gRPC requests
+TODOLT: provide gRPC endpoint that can respond if authorization passes
+TODOLT: how can we pass data back to gRPC back w/o protocol buffers?
 
-
-okay, i have a sorted array
-i want to insert
-i want to remove
-i don't want it to be absurd
-
-maybe i should sort what i have
-
-take it, write out a tree
-
-so traversing might be slower if its an array
-
-what we can do is sort what we need to insert first
-then we start going through our list, and when we encounter something that needs to be inserted
-we start building a linked list off of it
-
-
-functions are moved by reference/pointer
-if you move it into an interface, is it copied or is it passed by pointer
-
-
-
-If you are the left, the parent is always larger, your brother is always larger than both
-Your right is always larger than you, your left is always smaller than you, both are smaller than the parent
-
-If you are the right, the parent is always smaller, your brother is always smaller than both
-Your left is smaller than you, but larger than your parent, your right is larger than most.
-
-If you're the left, the next larger is always your right's left most children.
-If you have no right, the next largest is your parent.
-
-If you're the right, the next larger is always your right's left most children.
-If you have no right, the next largest is the next right off your parent.
-
-start with the left-most, then go up, that's your' next,	
