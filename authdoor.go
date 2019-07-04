@@ -65,16 +65,15 @@ type authFuncListCore struct {
 	name     string
 	funcList []authFuncInstance // these are copied, and this needs to be reordered
 	funcMap  map[string]int     // cornelk/hashmap would be faster
-	wg       sync.WaitGroup     // for tracking readers
 }
 
 // newAuthFuncListCore will take all instances- so the values of authFuncList.funcList too- and merge everything into a new sorted authFuncList with it's own WaitGroup
-func newAuthFuncListCore(name string, instances ...authFuncCallable) (authFuncListCore, error) {
+func newAuthFuncListCore(name string, callables ...authFuncCallable) (authFuncListCore, error) {
 	ret := authFuncListCore{
 		name: name,
 	}
-	err := ret.AddCallables(instances)
-	return ret, err
+	err := ret.AddCallables(callables) // no lock because it's the first call and nothing has access to it yet
+	return ret, err                    // Should this be a pointer? We don't want ot ocpy cores, copy sync.WaitGroups
 }
 
 // Len returns the lenfth of the object to be sorted (used by sort.Sort)
@@ -101,19 +100,19 @@ func (c *authFuncListCore) WriteMap() {
 
 // call will iterate through the authFuncListCore and return when AuthStatus is Denied or Responded is true, or when it completes without finding anything.
 
-func (l *authFuncListCore) call(w http.ResponseWriter, r *http.Request) (AuthStatus, Responded) {
+func (l *authFuncListCore) call(w http.ResponseWriter, r *http.Request) (status AuthStatus, responded Responded) {
 	// If we had a hint about which to call we could
 	for i, _ := range l.funcList {
-		status, responded := l.funcList[i](w, r)
+		status, responded = l.funcList[i](w, r)
 		if (status == AuthDenied) || (Responded) {
 			return status, responded
 		}
 	}
+	return status, responded
 }
 
 // AddCallables will add any AuthFuncList/Instance to it's own authFuncListCore, sorted properly.
 func (l *authFuncListCore) AddCallables(callables ...authFuncCallable) error {
-	// build tree out of all and build slice
 	for i, _ := range callables {
 		switch callables[i].(type) { // There needs to be a better way...
 		case authFuncList, authFuncListCore:
@@ -132,7 +131,7 @@ func (l *authFuncListCore) AddCallables(callables ...authFuncCallable) error {
 	return nil
 }
 
-// RemoveCallables can remove a AuthFuncList/Instance from it's core
+// RemoveCallables can remove a AuthFuncList/Instance from it's core. It maintains order.
 func (l *authFuncListCore) RemoveCallables(names ...string) {
 	for i, _ := range names {
 		l.funcList[l.funcMap[names[i]]].authFunc = nil
@@ -150,6 +149,7 @@ func (l *authFuncListCore) RemoveCallables(names ...string) {
 		}
 	}
 	l.funcList = l.funcList[:newSize] // could be an error
+	l.WriteMap()
 }
 
 // authFuncList provides concurency support to authFuncList.
@@ -163,8 +163,8 @@ type authFuncList struct {
 func NewAuthFuncList(name string, instances ...authFuncCallable) *authFuncList {
 	ret := authFuncList{
 		authFuncListCore: newAuthFuncListCore(name, instances),
-		handlers:         new([]*authHandler), // records all handlers
-		mutex:            new(sync.RWMutex),   // we're not using this yet
+		handlers:         new([]*authHandler),
+		mutex:            new(sync.RWMutex),
 	}
 }
 
@@ -190,29 +190,15 @@ func (l *authFuncList) UpdateHandlers() (chan int, int) {
 	completionNotifier := make(chan int, totalHandlers)
 	for i, _ := range l.handlers {
 		go func() {
-			lockNeeded := authHandler.startLock
+			lockNeeded := authHandler.startLock()
 			if lockNeeded {
 				l.handlers[i].UpdateActiveList()
-				authHandler.endLock
+				authHandler.endLock()
 			}
 			completionNotifier <- 1
 		}()
 	}
 	return completionNotfier, totalHandlers
-}
-
-// UpdateHandler is UpdateHandlers for one handler
-func (l *authFuncList) UpdateHandlers(handler *authHandler) (chan int, int) {
-	completionNotifier := make(chan int, 1)
-	go func() {
-		lockNeeded := authHandler.startLock
-		if lockNeeded {
-			authHandler.UpdateActiveList()
-			authHandler.endLock
-		}
-		completionNotifier <- 1
-	}()
-	return completionNotfier, 1
 }
 
 // BlockForUpdate will wait for all the handlers to update- may be unnecessary
@@ -232,6 +218,7 @@ type authHandler struct {
 	// This struct wraps the unique concurrency requirements of authHandlers. Concept is explained below the parent structures
 	authFuncs struct {
 		activeLists    [2]authFuncListCore // the lists actually being used
+		wg             [2]sync.WaitGroup
 		toUpdate       bool
 		currentList    int                      // for directing readers
 		mutex          sync.Mutex               // for writing
@@ -239,11 +226,9 @@ type authHandler struct {
 	}
 }
 
-// CONCEPT: this lets us build up a new authFuncListCore based off a modified componentsList. Doing anything requires you to hold the Mutex, then you make the switch. Hold the Mutex and wait for the WaitGroup on the buffer you want to be 0.
-
 // NewAuthHandler sets the base http.Handler
 func NewAuthHandler(handler http.Handler, callables ...authFuncCallable) *authHandler {
-	h := &authHandler{base: handler, authFuncs.mutex: new(sync.Mutex)}
+	h := &authHandler{base: handler, authFuncs.mutex: new(sync.Mutex)} // todo: initialize waitgroup?
 	h.authFuncs.componentsList = make(map[string]*authFuncList)
 	h.authFuncs.componentsList[""] = NewAuthFuncList("")
 	for i, _ := range callables {
@@ -284,20 +269,39 @@ func (h *authHandler) RemoveInstances(instanceNames ...string) {
 	h.authFuncs.componentsList[""].RemoveCallables(instances)
 }
 
+// UpdateHandler is UpdateHandlers for one handler
+func (h *authHandler) UpdateHandler() (chan int, int) {
+	completionNotifier := make(chan int, 1)
+	go func() {
+		lockNeeded := h.startLock()
+		if lockNeeded {
+			h.UpdateActiveList()
+			h.endLock()
+		}
+		completionNotifier <- 1
+	}()
+	return completionNotfier, 1
+}
+
 func (h *authHandler) AddLists(lists ...authFuncList) error {
 	for i, _ := range lists {
 		if _, ok := h.authFuncs.componentsList[lists[i].name]; ok {
 			return errors.Wrap(ErrNameTaken, lists[i].name)
 		}
+		lists[i].mutex.Lock()
 		h.authFuncs.componentsList[lists[i].name] = lists[i]
 		lists[i].addHandler(h)
+		lists[i].mutex.Unlock()
 		return nil
 	}
 }
 
 func (h *authHandler) RemoveLists(listNames ...string) {
 	for _, v := range listNames {
+		// lock lists
+		h.authFuncs.componentsList[v].mutex.Lock()
 		h.authFuncs.componentsList[v].removeHandler(h)
+		h.authFuncs.componentsList[v].mutex.Unlock()
 		delete(h.authFuncs.componentsList, v)
 	}
 
@@ -321,7 +325,7 @@ func (h *authHandler) endLock() {
 }
 
 func (h *authHandler) UpdateActiveList() {
-	h.authFuncs.activeLists[1-currentList].wg.Wait()
+	h.authFuncs.wg[1-currentList].Wait()
 	componentsListSlice := make([]*authFuncList, len(h.authFuncs.componentsList))
 	i := 0
 	for k, _ := range h.authFuncs.componentsList {
@@ -337,9 +341,9 @@ func (h *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	currentList := -1
 	for currentList != h.authFuncs.currentList {
 		currentList := h.authFuncs.currentList
-		h.authFuncs.activeLists[currentList].wg.Add()
+		h.authFuncs.wg[currentList].Add()
 		if h.authFuncs.currentList != currentList {
-			h.authFuncs.activeLists[currentList].wg.Done()
+			h.authFuncs.wg[currentList].Done()
 			currentList = -1
 			continue
 		}
@@ -347,11 +351,11 @@ func (h *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ret, ans := h.authFuncs.activeLists[currentList].funcList[i].call()
 			if (ret == AccessGranted) && (!ans) {
 				h.base.ServeHTTP()
-				h.authFuncs.activeLists[currentList].wg.Done()
+				h.authFuncs.wg[currentList].Done()
 				return
 			}
 		}
-		h.authFuncs.activeLists[currentList].wg.Done()
+		h.authFuncs.wg[currentList].Done()
 		return
 	}
 	return // should never get here eh
