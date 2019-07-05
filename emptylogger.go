@@ -23,3 +23,5 @@ func (e *emptyLogger) WithValues(keysAndValues ...interface{}) logr.Logger { ret
 
 // WithName is a shim to create an empty logging function to be used if none is supplied
 func (e *emptyLogger) WithName(name string) logr.Logger { return e }
+
+var _ logr.Logger = &emptyLogger{}
