@@ -20,8 +20,11 @@ func init() {
 
 // SetLogger allows you set a logger like github.com/go-logr/zapr
 func SetLogger(logger logr.Logger) {
-	logger = logger
+	logger = logger.WithName("authdoor.go")
 }
+
+// logger.Info("msg")
+// logger.Error(err, "msg")
 
 var (
 	// ErrNameTaken is returned when someone tries to register an auth method on a handler that already exists
@@ -31,9 +34,13 @@ var (
 // AuthStatus contains information from an AuthFunc about authorization status.
 type AuthStatus uint8
 
-// Responded is true if we wrote to the ResponseWriter- it is returned by an Authfunc.
-type Responded bool
+// ResponseStatus is true if we wrote to the ResponseWriter- it is returned by an Authfunc.
+type ResponseStatus bool
 
+const (
+	Answered ResponseStatus = true
+	Ignored                 = false
+)
 const (
 	// AuthFailed is returned by an AuthFunc if it couldn't determine the users identity.
 	AuthFailed AuthStatus = iota
@@ -43,20 +50,22 @@ const (
 	AuthDenied
 )
 
-// AuthFunc is any function that takes a response writer and request and returns two state variables, AuthStatus and Responded. TODO: Probably need to return some user data.
-type AuthFunc func(w http.ResponseWriter, r *http.Request) (AuthStatus, Responded)
+// AuthFunc is any function that takes a response writer and request and returns two state variables, AuthStatus and ResponseStatus. TODO: Probably need to return some user data.
+type AuthFunc func(w http.ResponseWriter, r *http.Request) (AuthStatus, ResponseStatus)
 
-// This interface represents anything that has a call function- so a list or an instance.
+// authFuncCallable interface represents anything that has a call function- so a list or an instance.
 type authFuncCallable interface {
-	call(w http.ResponseWriter, r *http.Request) (AuthStatus, Responded)
+	call(w http.ResponseWriter, r *http.Request) (AuthStatus, ResponseStatus)
 }
 
-// authFuncInstance is the structure actually used by a handler, it includes some meta data around the function. DESIGN NOTE: We don't use receiver because it makes it harder to create more concurrency issues by having multiple goroutines access the same structure.
+// authFuncInstance is the structure actually used by a handler, it includes some meta data around the function.
 type authFuncInstance struct {
 	name     string
 	authFunc AuthFunc
 	priority int
 }
+
+// DESIGN NOTE: We don't use receiver because it makes it harder to create more concurrency issues by having multiple goroutines access the same structure.
 
 // NewAuthFuncInstance takes some AuthFunc and lets you build an instance out of it
 func NewAuthFuncInstance(name string, authFunc AuthFunc, priority int) authFuncInstance {
@@ -68,7 +77,7 @@ func NewAuthFuncInstance(name string, authFunc AuthFunc, priority int) authFuncI
 }
 
 // call does the work of calling the auth function. DESIGN NOTE: Originally implemented to call the function along with it's containing structures race-preventing types, I'm not sure it's the best choice now.
-func (i *authFuncInstance) call(w http.ResponseWriter, r *http.Request) (AuthStatus, Responded) {
+func (i *authFuncInstance) call(w http.ResponseWriter, r *http.Request) (AuthStatus, ResponseStatus) {
 	return i.authFunc(w, r)
 }
 
@@ -82,7 +91,8 @@ type authFuncListCore struct {
 // newAuthFuncListCore will take all instances- so the values of authFuncList.funcList too- and merge everything into a new sorted authFuncList with it's own WaitGroup
 func newAuthFuncListCore(name string, callables ...authFuncCallable) (authFuncListCore, error) {
 	ret := authFuncListCore{
-		name: name,
+		name:    name,
+		funcMap: make(map[string]int),
 	}
 	err := ret.AddCallables(callables...) // no lock because it's the first call and nothing has access to it yet
 	return ret, err                       // Should this be a pointer? We don't want ot ocpy cores, copy sync.WaitGroups
@@ -110,17 +120,16 @@ func (c *authFuncListCore) WriteMap() {
 	}
 }
 
-// call will iterate through the authFuncListCore and return when AuthStatus is Denied or Responded is true, or when it completes without finding anything.
-
-func (l *authFuncListCore) call(w http.ResponseWriter, r *http.Request) (status AuthStatus, responded Responded) {
+// call will iterate through the authFuncListCore and return when AuthStatus is Denied or ResponseStatus is true, or when it completes without finding anything.
+func (l *authFuncListCore) call(w http.ResponseWriter, r *http.Request) (status AuthStatus, response ResponseStatus) {
 	// If we had a hint about which to call we could
 	for i, _ := range l.funcList {
-		status, responded = l.funcList[i].call(w, r)
-		if (status == AuthDenied) || (responded) {
-			return status, responded
+		status, response = l.funcList[i].call(w, r)
+		if (status == AuthFailed) && (response == Ignored) {
+			return status, response
 		}
 	}
-	return status, responded
+	return status, response
 }
 
 // AddCallables will add any AuthFuncList/Instance to it's own authFuncListCore, sorted properly.
@@ -259,7 +268,7 @@ func NewAuthHandler(handler http.Handler, callables ...authFuncCallable) *authHa
 			h.AddInstances(callables[i].(*authFuncInstance))
 		}
 	}
-	h.UpdateActiveList()
+	//h.UpdateActiveList() TODO
 	return h
 }
 
@@ -275,6 +284,10 @@ func (h *authHandler) SetBase(handler http.Handler) {
 
 func (h *authHandler) AddInstances(instances ...authFuncCallable) error {
 	for i, _ := range instances {
+		// Not sure what's going on here but okay TODO
+		if _, ok := instances[i].(*authFuncInstance); !ok {
+			continue
+		}
 		if _, ok := h.authFuncs.componentsList[""].funcMap[instances[i].(*authFuncInstance).name]; ok {
 			return errors.Wrap(ErrNameTaken, instances[i].(*authFuncInstance).name)
 		}
@@ -373,7 +386,7 @@ func (h *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		for i, _ := range h.authFuncs.activeLists[currentList].funcList {
 			ret, ans := h.authFuncs.activeLists[currentList].funcList[i].call(w, r)
-			if (ret == AuthGranted) && (!ans) {
+			if (ret == AuthGranted) && (ans == Ignored) {
 				h.base.ServeHTTP(w, r)
 				h.authFuncs.wg[currentList].Done()
 				return
