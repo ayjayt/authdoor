@@ -29,10 +29,9 @@ authHandler.ServeHTTP
 
 TODO:
 
-
-fix comments
-add logs
-write tests
+finish refactor!
+fix comments and logs
+write tests for each file
 look at race condition testing
 
 What we can do: add and remove lists, add and remove instances from lists. But we can't change paths yet. That's almost more important. I guess I have no idea what I'm building. So it needs this first with config, then with GRPC. Uhh then I can do an implementation. It needs to save config too.
