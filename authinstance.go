@@ -3,6 +3,8 @@ package authdoor
 import (
 	"errors"
 	"net/http"
+
+	"github.com/go-logr/logr"
 )
 
 var (
@@ -35,25 +37,28 @@ const (
 // AuthFunc is any function that takes a response writer and request and returns two state variables, AuthStatus and ResponseStatus. TODO: Probably need to return some user data.
 type AuthFunc func(w http.ResponseWriter, r *http.Request) (AuthStatus, ResponseStatus)
 
-// authFuncInstance is the structure actually used by a handler, it includes some meta data around the function.
-type authFuncInstance struct {
+// AuthFuncInstance is the structure actually used by a handler, it includes some meta data around the function.
+type AuthFuncInstance struct {
 	name     string
 	authFunc AuthFunc
 	priority int
+	logger   logr.Logger
 }
 
 // call does the work of calling the auth function. It's a simple wrapper.
-func (i *authFuncInstance) call(w http.ResponseWriter, r *http.Request) (AuthStatus, ResponseStatus) {
-	logger.Info("Calling an AuthFunc", "name", i.name, "priority", i.priority)
+func (i *AuthFuncInstance) call(w http.ResponseWriter, r *http.Request) (AuthStatus, ResponseStatus) {
+	// i.logger.Info("Calling an AuthFunc", "name", i.name, "priority", i.priority) - this logger is causing allocs
 	return i.authFunc(w, r)
 }
 
 // NewAuthFuncInstance takes some AuthFunc and lets you build an instance out of it.
-func NewAuthFuncInstance(name string, authFunc AuthFunc, priority int) authFuncInstance {
-	logger.Info("Creating new AuthFuncInstance", "name", name, "priority", priority)
-	return authFuncInstance{
-		name:     name,
-		authFunc: authFunc,
-		priority: priority,
+func (i *AuthFuncInstance) Init(name string, authFunc AuthFunc, priority int, logger logr.Logger) {
+	if logger == nil {
+		logger = defaultLogger
 	}
+	// logger.Info("Creating new AuthFuncInstance", "name", name, "priority", priority) - this logger is causing allocs
+	i.name = name
+	i.authFunc = authFunc
+	i.priority = priority
+	i.logger = logger
 }

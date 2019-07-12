@@ -4,19 +4,19 @@ import (
 	"github.com/go-logr/logr"
 )
 
-// A global default logger makes things a lot easier IMO
-var logger logr.Logger
+// A global default logger makes things a lot easier
+var defaultLogger logr.Logger
 
 func init() {
-	if logger == nil {
-		logger = &emptyLogger{}
+	if defaultLogger == nil {
+		defaultLogger = new(emptyLogger)
 	}
 }
 
-// SetLogger allows you set a logger like github.com/go-logr/zapr
-func SetLogger(newLogger logr.Logger) {
-	logger = newLogger.WithName("authdoor.go")
-	logger.Info("Logger set")
+// SetDefaultLogger allows you set a logger like github.com/go-logr/zapr
+func SetDefaultLogger(newLogger logr.Logger) {
+	defaultLogger = newLogger.WithName("authdoor")
+	defaultLogger.Info("Default logger set")
 }
 
 // logger.Info("msg")
