@@ -78,3 +78,13 @@ TODOLT: use this to authorize gRPC requests
 TODOLT: provide gRPC endpoint that can respond if authorization passes
 TODOLT: how can we pass data back to gRPC back w/o protocol buffers?
 
+allow you set logger in the structure
+
+write benchmarks
+do authfunclist
+do authfunclistsafe
+do authfunchandler
+
+load test authfunclist and authfunclistsafe
+
+get back on normal todolist
