@@ -1,11 +1,9 @@
 package authdoor
 
-import (
-	"github.com/go-logr/logr"
-)
+import ()
 
 // A global default logger makes things a lot easier
-var defaultLogger logr.Logger
+var defaultLogger loggerInterface
 
 func init() {
 	if defaultLogger == nil {
@@ -14,8 +12,8 @@ func init() {
 }
 
 // SetDefaultLogger allows you set a logger like github.com/go-logr/zapr
-func SetDefaultLogger(newLogger logr.Logger) {
-	defaultLogger = newLogger.WithName("authdoor")
+func SetDefaultLogger(newLogger loggerInterface) {
+	defaultLogger = newLogger
 	defaultLogger.Info("Default logger set")
 }
 

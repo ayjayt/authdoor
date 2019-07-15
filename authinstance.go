@@ -3,8 +3,6 @@ package authdoor
 import (
 	"errors"
 	"net/http"
-
-	"github.com/go-logr/logr"
 )
 
 var (
@@ -42,21 +40,21 @@ type AuthFuncInstance struct {
 	name     string
 	authFunc AuthFunc
 	priority int
-	logger   logr.Logger
+	logger   loggerInterface
 }
 
 // call does the work of calling the auth function. It's a simple wrapper.
 func (i *AuthFuncInstance) call(w http.ResponseWriter, r *http.Request) (AuthStatus, ResponseStatus) {
-	// i.logger.Info("Calling an AuthFunc", "name", i.name, "priority", i.priority) - this logger is causing allocs
+	// i.logger.Info("Calling an AuthFunc", "name", i.name, "priority", i.priority) - this logger is causing allocs // TODO
 	return i.authFunc(w, r)
 }
 
 // NewAuthFuncInstance takes some AuthFunc and lets you build an instance out of it.
-func (i *AuthFuncInstance) Init(name string, authFunc AuthFunc, priority int, logger logr.Logger) {
+func (i *AuthFuncInstance) Init(name string, authFunc AuthFunc, priority int, logger loggerInterface) {
 	if logger == nil {
 		logger = defaultLogger
 	}
-	// logger.Info("Creating new AuthFuncInstance", "name", name, "priority", priority) - this logger is causing allocs
+	// logger.Info("Creating new AuthFuncInstance", "name", name, "priority", priority) - this logger is causing allocs // TODO
 	i.name = name
 	i.authFunc = authFunc
 	i.priority = priority
