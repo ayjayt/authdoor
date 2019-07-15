@@ -108,5 +108,4 @@ func BenchmarkLogger(b *testing.B) {
 			sugaredLogger.Info("sugaredLogger.Info()")
 		}
 	})
-	// TODO: maybe open fake terminal and output there? github.com/creack/pty
 }
