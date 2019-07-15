@@ -1,3 +1,5 @@
 .*.swp
 authdoor.test
 profile_cpu.out
+profile_cpu.svg
+profile_cpu.torch.svg
