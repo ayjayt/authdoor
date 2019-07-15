@@ -40,7 +40,7 @@ type AuthFuncInstance struct {
 	name     string
 	authFunc AuthFunc
 	priority int
-	logger   loggerInterface
+	logger   LoggerInterface
 }
 
 // call does the work of calling the auth function. It's a simple wrapper.
@@ -50,7 +50,7 @@ func (i *AuthFuncInstance) call(w http.ResponseWriter, r *http.Request) (AuthSta
 }
 
 // NewAuthFuncInstance takes some AuthFunc and lets you build an instance out of it.
-func (i *AuthFuncInstance) Init(name string, authFunc AuthFunc, priority int, logger loggerInterface) {
+func (i *AuthFuncInstance) Init(name string, authFunc AuthFunc, priority int, logger LoggerInterface) {
 	if logger == nil {
 		logger = defaultLogger
 	}

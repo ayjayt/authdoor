@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	newLogger := &simpleLogger{}
+	newLogger := new(SimpleLogger)
 	newLogger.Init()
 	SetDefaultLogger(newLogger)
 	defaultLogger.Info("authdoor_test.go set logger")
@@ -16,5 +16,5 @@ func init() {
 
 // TestSetDefaultLogger ensures set logger works by verifying init() ran correctly
 func TestSetDefaultLogger(t *testing.T) {
-	require.IsType(t, &simpleLogger{}, defaultLogger)
+	require.IsType(t, &SimpleLogger{}, defaultLogger)
 }

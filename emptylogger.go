@@ -5,89 +5,101 @@ import (
 	"os"
 )
 
-type loggerInterface interface {
+// LogerInterface defines a simple interface to be used for logging. NOTE: Originally logr was used, but more features lead to less efficiency.
+type LoggerInterface interface {
 	Init() error
 	Info(string) error
 	Error(string) error
 }
 
-type emptyLogger struct{}
+// EmptyLogger is a logger that can be used to turn off logging entirely.
+type EmptyLogger struct{}
 
-func (l *emptyLogger) Init() error {
+// Init is EmptyLogger's blank Init method
+func (l *EmptyLogger) Init() error {
 	return nil
 }
 
-func (l *emptyLogger) Info(output string) error {
+// Info is EmptyLogger's blank Info method
+func (l *EmptyLogger) Info(output string) error {
 	return nil
 }
 
-func (l *emptyLogger) Error(output string) error {
+// Error is EmptyLogger's blank Error method
+func (l *EmptyLogger) Error(output string) error {
 	return nil
 }
 
-type simpleLogger struct {
-	path string
+// SimpleLogger is a simple logger that writes to stderr or a path it's given. It is NOT safe for concurrent use.
+type SimpleLogger struct {
+	Path string
 	file *os.File
 }
 
-func (l *simpleLogger) Init() error {
+// Init attaches SimpleLogger to some path
+func (l *SimpleLogger) Init() error {
 	var err error
-	if len(l.path) == 0 {
+	if len(l.Path) == 0 {
 		l.file = os.Stderr
 	} else {
-		l.file, err = os.OpenFile(l.path, os.O_APPEND|os.O_WRONLY, 0644)
+		l.file, err = os.OpenFile(l.Path, os.O_APPEND|os.O_WRONLY, 0644)
 	}
 	return err
 }
 
-func (l *simpleLogger) Info(output string) error {
+// Info writes the info string to the output for SimpleLogger
+func (l *SimpleLogger) Info(output string) error {
 	_, err := l.file.WriteString(output + "\n")
 	return err
 }
 
-func (l *simpleLogger) Error(output string) error {
+// Error writes the error string to the output for SimpleLogger
+func (l *SimpleLogger) Error(output string) error {
 	_, err := l.file.WriteString(output + "\n")
 	return err
 }
 
-// TODO: times and errors
-
-// zapWrap produces a uber-zap logging connection
-type zapWrap struct {
-	sugar       bool
-	paths       []string
-	ZapLogger   *zap.Logger
+// ZapWrap produces a uber-zap logging connection
+type ZapWrap struct {
+	// Sugar is a flag to indicate whether we shoudl use a Sugared logger
+	Sugar bool
+	// Paths lets us set the logging paths, otherwise we use stderr
+	Paths []string
+	// ZapLogger is the underlying ZapLogger
+	ZapLogger *zap.Logger
+	// SugarLogger is the underlying SugaredLogger
 	SugarLogger *zap.SugaredLogger
-	InfoFunc    func(output string) error
-	ErrorFunc   func(output string) error
+	// infoFunc is the function called by Info() method
+	infoFunc func(output string) error
+	// errorFunc is the function called by the Error() method
+	errorFunc func(output string) error
 }
 
-// Init starts a production level zap logger, which we use since we don't use all the same logging levels as Zap.
-func (z *zapWrap) Init() error {
+// Init starts a production level zap logger, which we use since we don't use all the same logging levels as Zap. It will switch the info or error func depending on whether or not its a sugared logger.
+func (z *ZapWrap) Init() error {
 	config := zap.NewProductionConfig()
-	if len(z.paths) > 0 {
-		config.OutputPaths = z.paths
+	if len(z.Paths) > 0 {
+		config.OutputPaths = z.Paths
 	}
 	z.ZapLogger, _ = config.Build()
-	// ZapLogger, change file?
-	if z.sugar {
+	if z.Sugar {
 		z.SugarLogger = z.ZapLogger.Sugar()
-		z.InfoFunc = func(output string) error {
+		z.infoFunc = func(output string) error {
 			z.SugarLogger.Info(output)
 			return nil
 		}
 
-		z.ErrorFunc = func(output string) error {
+		z.errorFunc = func(output string) error {
 			z.SugarLogger.Error(output)
 			return nil
 		}
 	} else {
-		z.InfoFunc = func(output string) error {
+		z.infoFunc = func(output string) error {
 			z.ZapLogger.Info(output)
 			return nil
 		}
 
-		z.ErrorFunc = func(output string) error {
+		z.errorFunc = func(output string) error {
 			z.ZapLogger.Error(output)
 			return nil
 		}
@@ -95,12 +107,12 @@ func (z *zapWrap) Init() error {
 	return nil
 }
 
-func (z *zapWrap) Info(output string) error {
-	z.InfoFunc(output)
-	return nil
+// Info is ZapWraps Info method, but just a wrapper for z.infoFunc
+func (z *ZapWrap) Info(output string) error {
+	return z.infoFunc(output)
 }
 
-func (z *zapWrap) Error(output string) error {
-	z.ErrorFunc(output)
-	return nil
+// Error is ZapWraps Error method, just a wrapper for z.errorFunc
+func (z *ZapWrap) Error(output string) error {
+	return z.errorFunc(output)
 }

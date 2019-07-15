@@ -81,14 +81,14 @@ func blankAuthFunc(w http.ResponseWriter, r *http.Request) (AuthStatus, Response
 func BenchmarkNewAuthFuncInstance(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		dut := new(AuthFuncInstance)
-		dut.Init("benchmark", blankAuthFunc, 0, &emptyLogger{})
+		dut.Init("benchmark", blankAuthFunc, 0, &EmptyLogger{})
 	}
 }
 
 // BenchmarkAuthFuncInstanceCall tests how fast and efficiently we call the authfunc member of the struct
 func BenchmarkAuthFuncInstanceCall(b *testing.B) {
 	dut := new(AuthFuncInstance)
-	dut.Init("benchmark", blankAuthFunc, 0, &emptyLogger{})
+	dut.Init("benchmark", blankAuthFunc, 0, &EmptyLogger{})
 	for i := 0; i < b.N; i++ {
 		dut.call(nil, nil)
 	}

@@ -7,7 +7,7 @@ import (
 
 // TestEmptyLogger tests the empty logger
 func TestEmptyLogger(t *testing.T) {
-	fakeLogger := &emptyLogger{}
+	fakeLogger := new(EmptyLogger)
 	err := fakeLogger.Init()
 	require.Nil(t, err)
 	err = fakeLogger.Info("nothing")
@@ -19,14 +19,14 @@ func TestEmptyLogger(t *testing.T) {
 
 // TestSimpleLogger tests the simple logger
 func TestSimpleLogger(t *testing.T) {
-	fakeLogger := &simpleLogger{}
+	fakeLogger := new(SimpleLogger)
 	fakeLogger.Init()
 	err := fakeLogger.Info("simpleLogger Info Test")
 	require.Nil(t, err)
 	err = fakeLogger.Error("simpleLogger Error Test")
 	require.Nil(t, err)
 
-	fakeLogger2 := &simpleLogger{path: "/dev/null"}
+	fakeLogger2 := &SimpleLogger{Path: "/dev/null"}
 	err = fakeLogger2.Init()
 	require.Nil(t, err)
 	err = fakeLogger2.Info("simpleLogger devnull test")
@@ -37,14 +37,14 @@ func TestSimpleLogger(t *testing.T) {
 
 // TestZapLogger tests the zap logger
 func TestZapLogger(t *testing.T) {
-	fakeLogger := &zapWrap{}
+	fakeLogger := new(ZapWrap)
 	fakeLogger.Init()
 	err := fakeLogger.Info("zapLogger Info Test")
 	require.Nil(t, err)
 	err = fakeLogger.Error("zapLogger Error Test")
 	require.Nil(t, err)
 
-	fakeLogger2 := &zapWrap{paths: []string{"/dev/null"}}
+	fakeLogger2 := &ZapWrap{Paths: []string{"/dev/null"}}
 	err = fakeLogger2.Init()
 	require.Nil(t, err)
 	err = fakeLogger2.Info("simpleLogger devnull test")
@@ -55,14 +55,14 @@ func TestZapLogger(t *testing.T) {
 
 // TestZapSugarLogger tests the zap sugared logger
 func TestZapSugarLogger(t *testing.T) {
-	fakeLogger := &zapWrap{sugar: true}
+	fakeLogger := &ZapWrap{Sugar: true}
 	fakeLogger.Init()
 	err := fakeLogger.Info("zapSugaredLogger Info Test")
 	require.Nil(t, err)
 	err = fakeLogger.Error("zapSugaredLogger Error Test")
 	require.Nil(t, err)
 
-	fakeLogger2 := &zapWrap{paths: []string{"/dev/null"}, sugar: true}
+	fakeLogger2 := &ZapWrap{Paths: []string{"/dev/null"}, Sugar: true}
 	err = fakeLogger2.Init()
 	require.Nil(t, err)
 	err = fakeLogger2.Info("simpleLogger devnull test")
@@ -71,72 +71,18 @@ func TestZapSugarLogger(t *testing.T) {
 	require.Nil(t, err)
 }
 
-// BUG: These benchmarks only work if declared globally like this. This bug stopped occuring after I removed
-// the re-opening of stderr. However, this function si here to show that it worked compared to the function below it,
-// "Benchmark Logger"
-/*
-var GemptyLogger *emptyLogger
-var GsimpleLogger *simpleLogger
-var GzapLogger *zapWrap
-var GsugaredLogger *zapWrap
-
-func init() {
-	GemptyLogger = &emptyLogger{}
-	GsimpleLogger = &simpleLogger{}
-	GsimpleLogger.Init()
-	GsimpleLogger.Info("SimpleLogger test")
-	GzapLogger = &zapWrap{}
-	GzapLogger.Init()
-	GzapLogger.Info("ZapLogger test")
-	GsugaredLogger = &zapWrap{sugar: true}
-	GsugaredLogger.Init()
-	GsugaredLogger.Info("SugarLogger test")
-
-}
-
-// BenchmarkLogger will test empty logger, simple logger, and two types of zap loggers
-func BenchmarkLoggerWorks(b *testing.B) {
-
-	b.Run("Benchmark empty logger", func(b *testing.B) {
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			GemptyLogger.Info("emptyLogger.Info()")
-		}
-	})
-	b.Run("Benchmark simple logger", func(b *testing.B) {
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			GsimpleLogger.Info("simpleLogger.Info()")
-		}
-	})
-	b.Run("Benchmark zap production logger", func(b *testing.B) {
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			GzapLogger.Info("zapLogger.Info()")
-		}
-	})
-	b.Run("Benchmark zap sugared logger", func(b *testing.B) {
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			GsugaredLogger.Info("sugaredLogger.Info()")
-		}
-	})
-	// TODO: maybe open fake terminal and output there? github.com/creack/pty
-}
-*/
-
 // BenchmarkLogger works to output testing to /dev/null
 func BenchmarkLogger(b *testing.B) {
 
 	b.Run("Benchmark empty logger", func(b *testing.B) {
-		emptyLogger := &emptyLogger{}
+		EmptyLogger := new(EmptyLogger)
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			emptyLogger.Info("emptyLogger.Info()")
+			EmptyLogger.Info("emptyLogger.Info()")
 		}
 	})
 	b.Run("Benchmark simple logger", func(b *testing.B) {
-		simpleLogger := &simpleLogger{path: "/dev/null"}
+		simpleLogger := &SimpleLogger{Path: "/dev/null"}
 		simpleLogger.Init()
 		simpleLogger.Info("SimpleLogger test")
 		b.ResetTimer()
@@ -145,7 +91,7 @@ func BenchmarkLogger(b *testing.B) {
 		}
 	})
 	b.Run("Benchmark zap production logger", func(b *testing.B) {
-		zapLogger := &zapWrap{paths: []string{"/dev/null"}}
+		zapLogger := &ZapWrap{Paths: []string{"/dev/null"}}
 		zapLogger.Init()
 		zapLogger.Info("ZapLogger test")
 		b.ResetTimer()
@@ -154,7 +100,7 @@ func BenchmarkLogger(b *testing.B) {
 		}
 	})
 	b.Run("Benchmark zap sugared logger", func(b *testing.B) {
-		sugaredLogger := &zapWrap{sugar: true, paths: []string{"/dev/null"}}
+		sugaredLogger := &ZapWrap{Sugar: true, Paths: []string{"/dev/null"}}
 		sugaredLogger.Init()
 		sugaredLogger.Info("SugarLogger test")
 		b.ResetTimer()
