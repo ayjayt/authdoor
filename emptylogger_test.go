@@ -14,6 +14,7 @@ func TestEmptyLogger(t *testing.T) {
 	require.Nil(t, err)
 	err = fakeLogger.Error("nothing")
 	require.Nil(t, err)
+	// Output:
 }
 
 // TestSimpleLogger tests the simple logger
@@ -24,7 +25,14 @@ func TestSimpleLogger(t *testing.T) {
 	require.Nil(t, err)
 	err = fakeLogger.Error("simpleLogger Error Test")
 	require.Nil(t, err)
-	_ = err
+
+	fakeLogger2 := &simpleLogger{path: "/dev/null"}
+	err = fakeLogger2.Init()
+	require.Nil(t, err)
+	err = fakeLogger2.Info("simpleLogger devnull test")
+	require.Nil(t, err)
+	err = fakeLogger2.Error("simpleLogger devnull test")
+	require.Nil(t, err)
 }
 
 // TestZapLogger tests the zap logger
@@ -35,7 +43,14 @@ func TestZapLogger(t *testing.T) {
 	require.Nil(t, err)
 	err = fakeLogger.Error("zapLogger Error Test")
 	require.Nil(t, err)
-	_ = err
+
+	fakeLogger2 := &zapWrap{paths: []string{"/dev/null"}}
+	err = fakeLogger2.Init()
+	require.Nil(t, err)
+	err = fakeLogger2.Info("simpleLogger devnull test")
+	require.Nil(t, err)
+	err = fakeLogger2.Error("simpleLogger devnull test")
+	require.Nil(t, err)
 }
 
 // TestZapSugarLogger tests the zap sugared logger
@@ -46,10 +61,20 @@ func TestZapSugarLogger(t *testing.T) {
 	require.Nil(t, err)
 	err = fakeLogger.Error("zapSugaredLogger Error Test")
 	require.Nil(t, err)
+
+	fakeLogger2 := &zapWrap{paths: []string{"/dev/null"}, sugar: true}
+	err = fakeLogger2.Init()
+	require.Nil(t, err)
+	err = fakeLogger2.Info("simpleLogger devnull test")
+	require.Nil(t, err)
+	err = fakeLogger2.Error("simpleLogger devnull test")
+	require.Nil(t, err)
 }
 
-// BUG: These benchmarks only work if declared globally like this
-
+// BUG: These benchmarks only work if declared globally like this. This bug stopped occuring after I removed
+// the re-opening of stderr. However, this function si here to show that it worked compared to the function below it,
+// "Benchmark Logger"
+/*
 var GemptyLogger *emptyLogger
 var GsimpleLogger *simpleLogger
 var GzapLogger *zapWrap
@@ -98,9 +123,10 @@ func BenchmarkLoggerWorks(b *testing.B) {
 	})
 	// TODO: maybe open fake terminal and output there? github.com/creack/pty
 }
+*/
 
-// BenchmarkLoggerNoWorks should work like above but it doesn't
-func BenchmarkLoggerNoWorks(b *testing.B) {
+// BenchmarkLogger works to output testing to /dev/null
+func BenchmarkLogger(b *testing.B) {
 
 	b.Run("Benchmark empty logger", func(b *testing.B) {
 		emptyLogger := &emptyLogger{}
@@ -110,7 +136,7 @@ func BenchmarkLoggerNoWorks(b *testing.B) {
 		}
 	})
 	b.Run("Benchmark simple logger", func(b *testing.B) {
-		simpleLogger := &simpleLogger{}
+		simpleLogger := &simpleLogger{path: "/dev/null"}
 		simpleLogger.Init()
 		simpleLogger.Info("SimpleLogger test")
 		b.ResetTimer()
@@ -119,7 +145,7 @@ func BenchmarkLoggerNoWorks(b *testing.B) {
 		}
 	})
 	b.Run("Benchmark zap production logger", func(b *testing.B) {
-		zapLogger := &zapWrap{}
+		zapLogger := &zapWrap{paths: []string{"/dev/null"}}
 		zapLogger.Init()
 		zapLogger.Info("ZapLogger test")
 		b.ResetTimer()
@@ -128,7 +154,7 @@ func BenchmarkLoggerNoWorks(b *testing.B) {
 		}
 	})
 	b.Run("Benchmark zap sugared logger", func(b *testing.B) {
-		sugaredLogger := &zapWrap{sugar: true}
+		sugaredLogger := &zapWrap{sugar: true, paths: []string{"/dev/null"}}
 		sugaredLogger.Init()
 		sugaredLogger.Info("SugarLogger test")
 		b.ResetTimer()
