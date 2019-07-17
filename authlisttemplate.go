@@ -15,7 +15,7 @@ type AuthFuncListTemplate struct {
 func (l *AuthFuncListTemplate) Init(name string, instances ...AuthFuncInstance) error {
 	l.name = name
 	l.handlerMutex = new(sync.RWMutex)
-	l.handlers = make([]*AuthHandler, 1)
+	l.handlers = make([]*AuthHandler, 0)
 	return l.AuthFuncListSafe.Init(instances...)
 }
 
