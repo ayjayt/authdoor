@@ -7,11 +7,11 @@ import (
 	"time"
 )
 
+// We will reseed our random number generator
 var seed = rand.NewSource(time.Now().UnixNano())
 var seededRand = rand.New(seed)
 
-// I have a an array that may or may not get sorted away
-// We know what order it should get calld i
+// testInstancesSortableRaw is really just another set of testtables and probably doesn't need to be declared here and in authinstance.
 type testInstancesSortableRaw struct {
 	name     string
 	priority int
@@ -19,7 +19,7 @@ type testInstancesSortableRaw struct {
 	expErr   error
 }
 
-// Negative and ascending to -1 is important
+// Sortable instances must have a negative and ascending to -1, since this slice also acts as a reference for test assertions.
 var sortableInstances = []testInstancesSortableRaw{
 	{"Alpha", -15, AuthFuncReturn{Auth: AuthFailed, Resp: Ignored}, nil},
 	{"Beta", -14, AuthFuncReturn{Auth: AuthDenied, Resp: Ignored}, nil},
@@ -38,7 +38,7 @@ var sortableInstances = []testInstancesSortableRaw{
 	{"Omicron", -1, AuthFuncReturn{Auth: AuthFailed, Resp: Answered}, nil},
 }
 
-// makeInstances takes our test table and turns it into instances.
+// makeInstances takes our test table and turns it into actual instances w/ a mock function for each AuthFunc that can check to see if it's been called.
 func makeInstances(t testing.TB, raw []testInstancesSortableRaw) ([]AuthFuncInstance, []*MockImpl) {
 	mockImpls := make([]*MockImpl, len(sortableInstances))
 	authInstances := make([]AuthFuncInstance, len(sortableInstances))
@@ -52,7 +52,7 @@ func makeInstances(t testing.TB, raw []testInstancesSortableRaw) ([]AuthFuncInst
 	return authInstances, mockImpls
 }
 
-// checkOrder determines if the instance list is in the correct order
+// checkOrder determines if the instance list is in the correct order by comparing adjacent item's priorities and making sure the map corresponds to the correct index.
 func checkOrder(list *AuthFuncList) (bool, AuthFuncInstance) {
 	for i, v := range list.funcList {
 		// Let's make sure it's mapped properly
@@ -66,7 +66,7 @@ func checkOrder(list *AuthFuncList) (bool, AuthFuncInstance) {
 	return true, AuthFuncInstance{}
 }
 
-// TestAuthFunc
+// TestAuthFuncListInit tests to make sure our Init() works.
 func TestAuthFuncListInit(t *testing.T) {
 	instances, _ := makeInstances(t, sortableInstances)
 	list := new(AuthFuncList)
@@ -81,7 +81,7 @@ func TestAuthFuncListInit(t *testing.T) {
 	}
 }
 
-// Test sort
+// TestAuthFuncListSort tests to see if our sort() method works.
 func TestAuthFuncListSort(t *testing.T) {
 	instances, _ := makeInstances(t, sortableInstances)
 	list := new(AuthFuncList)
@@ -100,7 +100,7 @@ func TestAuthFuncListSort(t *testing.T) {
 	require.True(t, ordered, "list value returned: %v", errorList)
 }
 
-// AuthFuncList will test one call
+// TestAuthFuncListCall will check to see if the Call()
 func TestAuthFuncListCall(t *testing.T) {
 	instances, mocks := makeInstances(t, sortableInstances)
 	list := new(AuthFuncList)
@@ -116,6 +116,7 @@ func TestAuthFuncListCall(t *testing.T) {
 	}
 }
 
+// TestAuthFuncListCallAll will check to see if the CallAll() method works
 func TestAuthFuncListCallAll(t *testing.T) {
 	instances, mocks := makeInstances(t, sortableInstances)
 	list := new(AuthFuncList)
@@ -133,7 +134,8 @@ func TestAuthFuncListCallAll(t *testing.T) {
 	}
 }
 
-func TestAuthFuncListAddInstances(t *testing.T) {
+// TestAuthFuncListAddInstance tests the AddInstance() method
+func TestAuthFuncListAddInstance(t *testing.T) {
 	instances, _ := makeInstances(t, sortableInstances)
 	list := new(AuthFuncList)
 	list.Init()
@@ -146,7 +148,8 @@ func TestAuthFuncListAddInstances(t *testing.T) {
 	require.True(t, ordered, "list value returned: %v", errorList)
 }
 
-func TestAuthFuncListRemoveInstances(t *testing.T) {
+// TestAuthFuncListRemoveInstance tests the RemoveInstance() method
+func TestAuthFuncListRemoveInstance(t *testing.T) {
 	instances, _ := makeInstances(t, sortableInstances)
 	list := new(AuthFuncList)
 	list.Init(instances...)
@@ -161,6 +164,7 @@ func TestAuthFuncListRemoveInstances(t *testing.T) {
 	require.Equal(t, 0, len(list.funcMap))
 }
 
+// BenchmarkAuthFuncListInit benchmarks the Init() method
 func BenchmarkAuthFuncListInit(b *testing.B) {
 	instances, _ := makeInstances(b, sortableInstances)
 	b.ResetTimer()
@@ -172,6 +176,7 @@ func BenchmarkAuthFuncListInit(b *testing.B) {
 	})
 }
 
+// BenchmarkAuthFuncListSort benchmarks the Sort() method
 func BenchmarkAuthFuncListSort(b *testing.B) {
 	instances, _ := makeInstances(b, sortableInstances)
 	list := new(AuthFuncList)
@@ -193,7 +198,7 @@ func BenchmarkAuthFuncListSort(b *testing.B) {
 	})
 }
 
-// AuthFuncList will test one call
+// BenchmarkAuthFuncListCall benchmarks the Call() method
 func BenchmarkAuthFuncListCall(b *testing.B) {
 	instances, _ := makeInstances(b, sortableInstances)
 	list := new(AuthFuncList)
@@ -204,7 +209,7 @@ func BenchmarkAuthFuncListCall(b *testing.B) {
 	}
 }
 
-// CallAll
+// BenchmarkAuthFuncListCallAll benchmarks the CallAll() method
 func BenchmarkAuthFuncListCallAll(b *testing.B) {
 	instances, _ := makeInstances(b, sortableInstances)
 	list := new(AuthFuncList)
@@ -215,10 +220,12 @@ func BenchmarkAuthFuncListCallAll(b *testing.B) {
 	}
 }
 
-// AddInstances
+// BenchmarkAuthFuncListInitAddRemoveInstances benchmarks the Add and Remove methods
 func BenchmarkAuthFuncListAddRemoveInstances(b *testing.B) {
-	b.Logf("This test adds and removes the same instance because of practical constrains")
-	b.Logf("Would probably benefit to add/remove more than one, though")
+	if testing.Verbose() {
+		b.Logf("This test adds and removes the same instance because of practical constrains")
+		b.Logf("Would probably benefit to add/remove more than one, though")
+	}
 	instances, _ := makeInstances(b, sortableInstances)
 	list := new(AuthFuncList)
 	list.Init()

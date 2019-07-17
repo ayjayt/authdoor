@@ -8,7 +8,8 @@ install:
 test:
 	go test -test.v -cover -race 
 	go test -run=xxx -test.bench=. -test.benchmem 
-	go test -cpuprofile profile_cpu.out # This doesn't seem to work, but since it's relatively execution times, this whole method doesn't make sense
+	@# Recreate a profile_cpu.out without race cover and bench, which skew results
+	go test -cpuprofile profile_cpu.out 
 
 # The following requires graphviz
 viz:
