@@ -8,8 +8,8 @@ import (
 // LogerInterface defines a simple interface to be used for logging. NOTE: Originally logr was used, but more features lead to less efficiency.
 type LoggerInterface interface {
 	Init() error
-	Info(string) error
-	Error(string) error
+	Info(string)
+	Error(string)
 }
 
 // EmptyLogger is a logger that can be used to turn off logging entirely.
@@ -21,13 +21,11 @@ func (l *EmptyLogger) Init() error {
 }
 
 // Info is EmptyLogger's blank Info method
-func (l *EmptyLogger) Info(output string) error {
-	return nil
+func (l *EmptyLogger) Info(output string) {
 }
 
 // Error is EmptyLogger's blank Error method
-func (l *EmptyLogger) Error(output string) error {
-	return nil
+func (l *EmptyLogger) Error(output string) {
 }
 
 // SimpleLogger is a simple logger that writes to stderr or a path it's given. It is NOT safe for concurrent use.
@@ -48,15 +46,13 @@ func (l *SimpleLogger) Init() error {
 }
 
 // Info writes the info string to the output for SimpleLogger
-func (l *SimpleLogger) Info(output string) error {
-	_, err := l.file.WriteString(output + "\n")
-	return err
+func (l *SimpleLogger) Info(output string) {
+	_, _ = l.file.WriteString(output + "\n")
 }
 
 // Error writes the error string to the output for SimpleLogger
-func (l *SimpleLogger) Error(output string) error {
-	_, err := l.file.WriteString(output + "\n")
-	return err
+func (l *SimpleLogger) Error(output string) {
+	_, _ = l.file.WriteString(output + "\n")
 }
 
 // ZapWrap produces a uber-zap logging connection
@@ -70,9 +66,9 @@ type ZapWrap struct {
 	// SugarLogger is the underlying SugaredLogger
 	SugarLogger *zap.SugaredLogger
 	// infoFunc is the function called by Info() method
-	infoFunc func(output string) error
+	infoFunc func(output string)
 	// errorFunc is the function called by the Error() method
-	errorFunc func(output string) error
+	errorFunc func(output string)
 }
 
 // Init starts a production level zap logger, which we use since we don't use all the same logging levels as Zap. It will switch the info or error func depending on whether or not its a sugared logger.
@@ -81,38 +77,32 @@ func (z *ZapWrap) Init() error {
 	if len(z.Paths) > 0 {
 		config.OutputPaths = z.Paths
 	}
-	z.ZapLogger, _ = config.Build()
+	z.ZapLogger, _ = config.Build(zap.AddCallerSkip(2))
 	if z.Sugar {
 		z.SugarLogger = z.ZapLogger.Sugar()
-		z.infoFunc = func(output string) error {
+		z.infoFunc = func(output string) {
 			z.SugarLogger.Info(output)
-			return nil
 		}
-
-		z.errorFunc = func(output string) error {
+		z.errorFunc = func(output string) {
 			z.SugarLogger.Error(output)
-			return nil
 		}
 	} else {
-		z.infoFunc = func(output string) error {
+		z.infoFunc = func(output string) {
 			z.ZapLogger.Info(output)
-			return nil
 		}
-
-		z.errorFunc = func(output string) error {
+		z.errorFunc = func(output string) {
 			z.ZapLogger.Error(output)
-			return nil
 		}
 	}
 	return nil
 }
 
 // Info is ZapWraps Info method, but just a wrapper for z.infoFunc
-func (z *ZapWrap) Info(output string) error {
-	return z.infoFunc(output)
+func (z *ZapWrap) Info(output string) {
+	z.infoFunc(output)
 }
 
 // Error is ZapWraps Error method, just a wrapper for z.errorFunc
-func (z *ZapWrap) Error(output string) error {
-	return z.errorFunc(output)
+func (z *ZapWrap) Error(output string) {
+	z.errorFunc(output)
 }

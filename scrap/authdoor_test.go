@@ -110,7 +110,6 @@ func TestAuthFuncListCore(t *testing.T) {
 		names = append(names, v.name)
 	}
 	dut.RemoveCallables(names...)
-	// TODO: can't copy dut, the Core
 	for i, _ := range tt {
 		t.Logf("Name: %v, Priority: %v, Index: %v, Calced-Index: %v", tt[i].name, tt[i].priority, dut.funcMap[tt[i].name], len(tt)-1+tt[i].priority)
 		// Check to see if the map translates to priority properly (-5 == 0)

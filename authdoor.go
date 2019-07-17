@@ -16,6 +16,3 @@ func SetDefaultLogger(newLogger LoggerInterface) {
 	defaultLogger = newLogger
 	defaultLogger.Info("Default logger set")
 }
-
-// logger.Info("msg")
-// logger.Error(err, "msg")
