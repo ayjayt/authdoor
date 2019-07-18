@@ -68,31 +68,33 @@ func TestAuthFuncListTemplateRemoveHandler(t *testing.T) {
 	require.Equal(t, 0, len(list.handlers))
 }
 
-/*
+// Test UpdateHandler
+// Test BlockForUpdate
 // BenchmarkAuthFuncListSafeInit will benchmark the Init() method
-func BenchmarkAuthFuncListSafeInit(b *testing.B) {
+func BenchmarkAuthFuncListTemplateInit(b *testing.B) {
 	instances, _ := makeInstances(b, sortableInstances)
 	b.ResetTimer()
 	b.Run("Init", func(b *testing.B) {
 		for i := 0; i <= b.N; i++ {
-			list := new(AuthFuncListSafe)
-			list.Init(instances...)
+			list := new(AuthFuncListTemplate)
+			list.Init("benchmark", instances...)
 		}
 	})
 }
 
 // BenchmarkAuthFuncListSafeAddRemoveInstance will benchmark the AddRemove() method
-func BenchmarkAuthFuncListSafeAddRemoveInstance(b *testing.B) {
+func BenchmarkAuthFuncListTemplateAddRemoveHandler(b *testing.B) {
 	if testing.Verbose() {
 		b.Logf("This test adds and removes the same instance because of practical constrains")
 		b.Logf("Would probably benefit to add/remove more than one, though")
 	}
 	instances, _ := makeInstances(b, sortableInstances)
-	list := new(AuthFuncListSafe)
-	list.Init()
+	list := new(AuthFuncListTemplate)
+	list.Init("benchmark", instances...)
+	handler := new(AuthHandler)
+	handler.Init(nil)
 	for i := 0; i < b.N; i++ {
-		list.AddInstances(instances[0])
-		list.RemoveInstances(instances[0].name)
+		list.AddHandler(handler)
+		list.RemoveHandler(handler)
 	}
 }
-*/
