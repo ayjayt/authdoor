@@ -22,7 +22,7 @@ torch:
 	PATH=$(PATH):$(HOME)/software/FlameGraph go-torch -b profile_cpu.out -f profile_cpu.torch.svg
 
 heap:
-	go build -gcflags '-m -m'
+	go build -gcflags '-m -m -l -e'
 	@# two more m's are possible but its too verbose
 	@# -race is better for load and integration tests
 
