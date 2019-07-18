@@ -68,8 +68,10 @@ func TestAuthFuncListTemplateRemoveHandler(t *testing.T) {
 	require.Equal(t, 0, len(list.handlers))
 }
 
+// It would be better I guess if AuthFuncListTemplate handlers took an interface, that if the interface defined most of what was needed to access the data strucutre. Then I could test with mocks. It tests still need to sometimes access things that wont be exposed by the interface. Either way, I will rewrite this once UpdateHandler is done.
 // Test UpdateHandler
 // Test BlockForUpdate
+
 // BenchmarkAuthFuncListSafeInit will benchmark the Init() method
 func BenchmarkAuthFuncListTemplateInit(b *testing.B) {
 	instances, _ := makeInstances(b, sortableInstances)
