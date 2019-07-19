@@ -28,6 +28,9 @@ func (l *EmptyLogger) Info(output string) {
 func (l *EmptyLogger) Error(output string) {
 }
 
+// This statement ensures we're fufilling the interface we intend to
+var _ LoggerInterface = &EmptyLogger{}
+
 // SimpleLogger is a simple logger that writes to stderr or a path it's given. It is NOT safe for concurrent use.
 type SimpleLogger struct {
 	Path string
@@ -54,6 +57,8 @@ func (l *SimpleLogger) Info(output string) {
 func (l *SimpleLogger) Error(output string) {
 	_, _ = l.file.WriteString(output + "\n")
 }
+
+var _ LoggerInterface = &SimpleLogger{}
 
 // ZapWrap produces a uber-zap logging connection
 type ZapWrap struct {
@@ -106,3 +111,5 @@ func (z *ZapWrap) Info(output string) {
 func (z *ZapWrap) Error(output string) {
 	z.errorFunc(output)
 }
+
+var _ LoggerInterface = &ZapWrap{}

@@ -8,22 +8,38 @@ import (
 	"testing"
 )
 
+// testLogger is an implmentation of a LoggerInterface but, like the "testing" package, requires one to set either the benchmark or testing variable.
 type testLogger struct {
 	t testing.TB
 }
 
+// NewTestLogger is a wrapper to create a logger for use with those tests
+func NewTestLogger(t testing.TB) testLogger {
+	ret := testLogger{t: t}
+	ret.Init()
+	return ret
+}
+
+// Info supplies the less severe testing method of testLogger
 func (t *testLogger) Info(output string) {
 	t.t.Log(output)
 }
+
+// Error supplies the most sever testing method of testLogger
 func (t *testLogger) Error(output string) {
 	t.t.Error(output)
 }
+
+// Init is the required Init function of a LoggerInterface for testLogger
 func (t *testLogger) Init() error {
 	if t.t == nil {
 		return errors.New("You must set testLogger.t")
 	}
 	return nil
 }
+
+// This just ensures we're fufilling the interface we intend to at compile time
+var _ LoggerInterface = &testLogger{}
 
 // TestEmptyLogger tests the empty logger
 func TestEmptyLogger(t *testing.T) {

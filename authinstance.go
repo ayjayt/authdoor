@@ -12,11 +12,21 @@ var (
 	ErrNameTaken = errors.New("tried to create an auth function with the same name as an existing function")
 )
 
+// AuthFunc is any function that takes a response writer and request and returns information about auth (status and user info) as well as an error
+type AuthFunc func(w http.ResponseWriter, r *http.Request) (AuthFuncReturn, error)
+
+// AuthFuncReturn wraps all the relevenat return data from an AuthFunc
+type AuthFuncReturn struct {
+	// Auth represents whether or not access was granted etc
+	Auth AuthStatus
+	// Resp lets us know whether or not we've made a reply via HTTP
+	Resp RespStatus
+	// Info supplies any info about the user and auth method we want
+	Info InstanceReturnInfo
+}
+
 // AuthStatus contains information from an AuthFunc about authorization status.
 type AuthStatus uint8
-
-// RespStatus is returned "true" from an AuthFunc (see consts below) if we wrote to the ResponseWriter.
-type RespStatus bool
 
 const (
 	// AuthFailed is returned by an AuthFunc if it couldn't determine the users identity.
@@ -27,6 +37,7 @@ const (
 	AuthDenied
 )
 
+// String provides aw ay to convert an AuthStatus to descriptive text- affects logs and errors
 func (a AuthStatus) String() string {
 	switch a {
 	case AuthFailed:
@@ -39,6 +50,9 @@ func (a AuthStatus) String() string {
 	return "Unknown"
 }
 
+// RespStatus is returned "true" from an AuthFunc (see consts below) if we wrote to the ResponseWriter.
+type RespStatus bool
+
 const (
 	// Answered is the value of ResponseStatus when we wrote to the ResponseWriter
 	Answered RespStatus = true
@@ -46,6 +60,7 @@ const (
 	Ignored RespStatus = false
 )
 
+// String provides aw ay to convert an AuthStatus to descriptive text- affects logs and errors
 func (r RespStatus) String() string {
 	switch r {
 	case Answered:
@@ -56,15 +71,12 @@ func (r RespStatus) String() string {
 	return "Unknown"
 }
 
+// InstanceReturnInfo represents data from some AuthFunc
 type InstanceReturnInfo struct {
+	// name is unexported because we don't want people to change it- it comes right from the instance
 	name string
+	// Info would be arbitrary data supplied by the auth method
 	Info json.RawMessage
-}
-
-type AuthFuncReturn struct {
-	Auth AuthStatus
-	Resp RespStatus
-	Info InstanceReturnInfo
 }
 
 func (r *AuthFuncReturn) IsDone() bool {
@@ -73,9 +85,6 @@ func (r *AuthFuncReturn) IsDone() bool {
 	}
 	return false
 }
-
-// AuthFunc is any function that takes a response writer and request and returns two state variables, AuthStatus and ResponseStatus. TODO: Probably need to return some user data.
-type AuthFunc func(w http.ResponseWriter, r *http.Request) (AuthFuncReturn, error)
 
 // AuthFuncInstance is the structure actually used by a handler, it includes some meta data around the function.
 type AuthFuncInstance struct {

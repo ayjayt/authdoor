@@ -2,7 +2,7 @@ package authdoor
 
 import ()
 
-// A global default logger makes things a lot easier
+// defaultLogger is a global default logger makes things a lot easier
 var defaultLogger LoggerInterface
 
 func init() {

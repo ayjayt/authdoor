@@ -6,6 +6,7 @@ import (
 	"testing"
 )
 
+// TEstMain runs first just to see if we should turn on verbose logging during testing
 func TestMain(t *testing.T) {
 	if testing.Verbose() {
 		fmt.Printf("Verbose...\n")
