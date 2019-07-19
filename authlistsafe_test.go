@@ -34,11 +34,11 @@ func TestAuthFuncListSafeCall(t *testing.T) {
 		require.Equal(t, v.expErr, err)
 		require.Equal(t, v.expRet.Auth, ret.Auth)
 		require.Equal(t, v.expRet.Resp, ret.Resp)
-		mocks[i].RequireCalled()
+		mocks[i].RequireCalled(t)
 	}
 }
 
-// TestAuthFuncListSafeCallAll will test  the CallAll() method
+// TestAuthFuncListSafeCallAll will test the CallAll() method
 func TestAuthFuncListSafeCallAll(t *testing.T) {
 	instances, mocks := makeInstances(t, sortableInstances)
 	list := new(AuthFuncListSafe)
@@ -52,7 +52,7 @@ func TestAuthFuncListSafeCallAll(t *testing.T) {
 		require.FailNowf(t, "Unexpected return from CallAll.", "Returned: %v, %v", ret.Auth, ret.Resp) // I don't like how we test this
 	}
 	for i := 0; i < list.funcMap[ret.Info.name]; i++ {
-		mocks[i].RequireCalled()
+		mocks[i].RequireCalled(t)
 	}
 }
 
