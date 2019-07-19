@@ -10,7 +10,7 @@ import (
 
 var (
 	// ErrNotFound is returned by "call" when we ask for an AuthFuncInstance that doesn't exist
-	ErrNotFound = errors.New("Name wasn't found")
+	ErrNotFound = errors.New("name wasn't found")
 )
 
 // AuthFuncList is the basic idea of a list of iterable AuthFuncs.
@@ -20,6 +20,16 @@ type AuthFuncList struct {
 	logger   LoggerInterface
 }
 
+// ListInstance returns a slice of AuthFuncList's instance names
+func (l *AuthFuncList) ListInstances() []string {
+	ret := make([]string, len(l.funcList))
+	for i, _ := range l.funcList {
+		ret[i] = l.funcList[i].name
+	}
+	return ret
+}
+
+// SetLogger sets the default logger for an AuthFuncList
 func (l *AuthFuncList) SetLogger(logger LoggerInterface) {
 	l.logger = logger
 }
@@ -91,10 +101,9 @@ func (l *AuthFuncList) CallAll(w http.ResponseWriter, r *http.Request) (ret Auth
 
 // AddInstances will add any AuthFuncInstance to it's own AuthFuncList, sorted properly.
 func (l *AuthFuncList) AddInstances(instances ...AuthFuncInstance) error {
-	l.logger.Info("Adding " + strconv.Itoa(len(instances)) + " instances")
 	for i, _ := range instances {
 		if _, ok := l.funcMap[instances[i].name]; ok {
-			l.logger.Info("Tried to add instance with duplicate name:" + instances[i].name)
+			l.logger.Error("Tried to add instance with duplicate name:" + instances[i].name)
 			return errors.Wrap(ErrNameTaken, instances[i].name)
 		}
 		l.funcMap[instances[i].name] = i

@@ -7,20 +7,11 @@ import (
 	"time"
 )
 
-// We will reseed our random number generator
-var seed = rand.NewSource(time.Now().UnixNano())
-var seededRand = rand.New(seed)
+// seededRand will reseed our random number generator
+var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-// testInstancesSortableRaw is really just another set of testtables and probably doesn't need to be declared here and in authinstance.
-type testInstancesSortableRaw struct {
-	name     string
-	priority int
-	expRet   AuthFuncReturn
-	expErr   error
-}
-
-// Sortable instances must have a negative and ascending to -1, since this slice also acts as a reference for test assertions.
-var sortableInstances = []testInstancesSortableRaw{
+// sortableInstances must have a negative and ascending to -1, since this slice also acts as a reference for test assertions.
+var sortableInstances = []testInstancesRaw{
 	{"Alpha", -15, AuthFuncReturn{Auth: AuthFailed, Resp: Ignored}, nil},
 	{"Beta", -14, AuthFuncReturn{Auth: AuthDenied, Resp: Ignored}, nil},
 	{"Gamma", -13, AuthFuncReturn{Auth: AuthGranted, Resp: Ignored}, nil},
@@ -39,12 +30,12 @@ var sortableInstances = []testInstancesSortableRaw{
 }
 
 // makeInstances takes our test table and turns it into actual instances w/ a mock function for each AuthFunc that can check to see if it's been called.
-func makeInstances(t testing.TB, raw []testInstancesSortableRaw) ([]AuthFuncInstance, []*MockImpl) {
+func makeInstances(t testing.TB, raw []testInstancesRaw) ([]AuthFuncInstance, []*MockImpl) {
 	mockImpls := make([]*MockImpl, len(sortableInstances))
 	authInstances := make([]AuthFuncInstance, len(sortableInstances))
 	for i := range raw {
 		dut := AuthFuncInstance{}
-		mockImpl := newMockAuthFunc(t, raw[i].expRet, raw[i].expErr)
+		mockImpl := newMockAuthFunc(raw[i].expRet, raw[i].expErr)
 		dut.Init(raw[i].name, mockImpl.mockAuthFunc, raw[i].priority, nil)
 		mockImpls[i] = mockImpl
 		authInstances[i] = dut
@@ -77,7 +68,19 @@ func TestAuthFuncListInit(t *testing.T) {
 	require.True(t, ordered, "list value returned: %v", errorList)
 	for i := range list.funcList {
 		// This wouldn't work if priorities weren't distinct
-		require.Equal(t, list.funcList[i].name, sortableInstances[i].name)
+		require.Equal(t, sortableInstances[i].name, list.funcList[i].name)
+	}
+}
+
+// TestAuthFuncListListInstances tests that we can retreive a list of instance names
+func TestAuthFuncListListInstances(t *testing.T) {
+	instances, _ := makeInstances(t, sortableInstances)
+	list := new(AuthFuncList)
+	list.Init(instances...)
+	names := list.ListInstances()
+	for i, v := range names {
+		// This wouldn't work if priorities weren't distinct
+		require.Equal(t, sortableInstances[i].name, v)
 	}
 }
 
@@ -112,7 +115,7 @@ func TestAuthFuncListCall(t *testing.T) {
 		require.Equal(t, v.expErr, err)
 		require.Equal(t, v.expRet.Auth, ret.Auth)
 		require.Equal(t, v.expRet.Resp, ret.Resp)
-		mocks[i].RequireCalled()
+		mocks[i].RequireCalled(t)
 	}
 }
 
@@ -130,7 +133,7 @@ func TestAuthFuncListCallAll(t *testing.T) {
 		require.FailNowf(t, "Unexpected return from CallAll.", "Returned: %v, %v", ret.Auth, ret.Resp) // I don't like how we test this
 	}
 	for i := 0; i < list.funcMap[ret.Info.name]; i++ {
-		mocks[i].RequireCalled()
+		mocks[i].RequireCalled(t)
 	}
 }
 

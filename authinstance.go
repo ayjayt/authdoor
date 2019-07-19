@@ -79,8 +79,14 @@ type InstanceReturnInfo struct {
 	Info json.RawMessage
 }
 
+// IsAnswered is a simple helper to check if the ResponseWriter was written to
+func (r *AuthFuncReturn) IsAnswered() bool {
+	return r.Resp == Answered
+}
+
+// IsDone is a helper method to let us know if we need to keep looping through auth functions
 func (r *AuthFuncReturn) IsDone() bool {
-	if r.Auth == AuthGranted || r.Auth == AuthDenied || r.Resp == Answered {
+	if r.Auth == AuthGranted || r.Auth == AuthDenied || r.IsAnswered() {
 		return true
 	}
 	return false
@@ -94,22 +100,23 @@ type AuthFuncInstance struct {
 	logger   LoggerInterface
 }
 
-// call does the work of calling the auth function. It's a simple wrapper.
-func (i *AuthFuncInstance) call(w http.ResponseWriter, r *http.Request) (AuthFuncReturn, error) {
-	// i.logger.Info("Calling an AuthFunc", "name", i.name, "priority", i.priority) - this logger is causing allocs // TODO
-	ret, err := i.authFunc(w, r) // this will also need to return some data wrapped
-	ret.Info.name = i.name
-	return ret, err
-}
-
 // NewAuthFuncInstance takes some AuthFunc and lets you build an instance out of it.
 func (i *AuthFuncInstance) Init(name string, authFunc AuthFunc, priority int, logger LoggerInterface) {
 	if logger == nil {
-		logger = defaultLogger
+		i.logger = defaultLogger
+	} else {
+		i.logger = logger
 	}
-	i.logger = logger
 	i.logger.Info("Creating instance called \"" + name + "\" with priority " + strconv.Itoa(priority))
 	i.name = name
 	i.authFunc = authFunc
 	i.priority = priority
+}
+
+// call does the work of calling the auth function. It's a simple wrapper.
+func (i *AuthFuncInstance) call(w http.ResponseWriter, r *http.Request) (AuthFuncReturn, error) {
+	// Avoid logging in a hotpath?
+	ret, err := i.authFunc(w, r)
+	ret.Info.name = i.name
+	return ret, err
 }

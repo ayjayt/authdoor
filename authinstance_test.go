@@ -9,9 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// MockImpl is a structure providing shim functions that cna be checked to see if they were called
 type MockImpl struct {
 	mock.Mock
-	t      testing.TB
 	expRet AuthFuncReturn
 	expErr error
 }
@@ -24,24 +24,28 @@ func (m *MockImpl) mockAuthFunc(w http.ResponseWriter, r *http.Request) (AuthFun
 	return expRet, expErr
 }
 
-// This should have just taken t.
-func (m *MockImpl) RequireCalled() {
-	m.AssertCalled(m.t, "mockAuthFunc", nil, (*http.Request)(nil))
+// RequireCalled will assert that function was called in testing
+func (m *MockImpl) RequireCalled(tb testing.TB) {
+	m.AssertCalled(tb, "mockAuthFunc", nil, (*http.Request)(nil))
 }
 
-func newMockAuthFunc(t testing.TB, expRet AuthFuncReturn, expErr error) *MockImpl {
-	mockImpl := &MockImpl{t: t, expRet: expRet, expErr: expErr}
+// newMockAuthFunc is a generator for fake AuthFuncs
+func newMockAuthFunc(expRet AuthFuncReturn, expErr error) *MockImpl {
+	mockImpl := &MockImpl{expRet: expRet, expErr: expErr}
 	mockImpl.On("mockAuthFunc", nil, (*http.Request)(nil)).Return(expRet, expErr)
 	return mockImpl
 }
 
-// testInstancesRaw is a to-be-read-only global for tests that reflects all possible combinations of return values for an AuthFuncInstance/AuthFunc
-var testInstancesRaw = []struct {
+// testInstancesRaw is a data table used to form authfuncs and authinstances for use in testing.
+type testInstancesRaw struct {
 	name     string
 	priority int
 	expRet   AuthFuncReturn
 	expErr   error
-}{
+}
+
+// allReturnCombos is an instance of testInstancesRaw that provides all possible return values of an AuthFunc
+var allReturnCombos = []testInstancesRaw{
 	{
 		"AuthFailed and Ignored",
 		0,
@@ -105,29 +109,29 @@ var testInstancesRaw = []struct {
 
 // TestInit tests the AuthFuncInstance object constructor
 func TestAuthFuncInstanceInit(t *testing.T) {
-	for i := range testInstancesRaw {
-		mockImpl := newMockAuthFunc(t, testInstancesRaw[i].expRet, testInstancesRaw[i].expErr)
+	for i := range allReturnCombos {
+		mockImpl := newMockAuthFunc(allReturnCombos[i].expRet, allReturnCombos[i].expErr)
 		dut := new(AuthFuncInstance)
-		dut.Init(testInstancesRaw[i].name, mockImpl.mockAuthFunc, testInstancesRaw[i].priority, nil)
+		dut.Init(allReturnCombos[i].name, mockImpl.mockAuthFunc, allReturnCombos[i].priority, nil)
 
-		require.IsType(t, &AuthFuncInstance{}, dut)                  // we created a new AuthFunc
-		require.Equal(t, testInstancesRaw[i].name, dut.name)         // it has the proper value
-		require.Equal(t, testInstancesRaw[i].priority, dut.priority) // it has the proper value
+		require.IsType(t, &AuthFuncInstance{}, dut)                 // we created a new AuthFunc
+		require.Equal(t, allReturnCombos[i].name, dut.name)         // it has the proper value
+		require.Equal(t, allReturnCombos[i].priority, dut.priority) // it has the proper value
 	}
 }
 
 // TestCall tests the AuthFuncInstance call
 func TestAuthFuncInstanceCall(t *testing.T) {
-	for i := range testInstancesRaw {
-		mockImpl := newMockAuthFunc(t, testInstancesRaw[i].expRet, testInstancesRaw[i].expErr)
+	for i := range allReturnCombos {
+		mockImpl := newMockAuthFunc(allReturnCombos[i].expRet, allReturnCombos[i].expErr)
 		dut := new(AuthFuncInstance)
-		dut.Init(testInstancesRaw[i].name, mockImpl.mockAuthFunc, testInstancesRaw[i].priority, nil)
+		dut.Init(allReturnCombos[i].name, mockImpl.mockAuthFunc, allReturnCombos[i].priority, nil)
 		info, err := dut.call(nil, nil) // it is called
-		require.Equal(t, testInstancesRaw[i].expErr, err)
-		mockImpl.RequireCalled() // the authfunc we passed is called
-		require.Equal(t, testInstancesRaw[i].expRet.Auth, info.Auth)
-		require.Equal(t, testInstancesRaw[i].expRet.Resp, info.Resp)
-		require.Equal(t, testInstancesRaw[i].name, info.Info.name)
+		require.Equal(t, allReturnCombos[i].expErr, err)
+		mockImpl.RequireCalled(t) // the authfunc we passed is called
+		require.Equal(t, allReturnCombos[i].expRet.Auth, info.Auth)
+		require.Equal(t, allReturnCombos[i].expRet.Resp, info.Resp)
+		require.Equal(t, allReturnCombos[i].name, info.Info.name)
 	}
 }
 
