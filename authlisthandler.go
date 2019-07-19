@@ -21,7 +21,7 @@ type AuthHandler struct {
 	componentsList map[string]*AuthFuncListTemplate // for default and external lists
 }
 
-// Init sets the base http.Handler
+// Init sets the base http.Handler and initializes some variables
 func (h *AuthHandler) Init(handler http.Handler) error {
 	h.base = handler
 	h.componentMutex = new(sync.Mutex)
@@ -32,11 +32,9 @@ func (h *AuthHandler) Init(handler http.Handler) error {
 		return nil
 	}
 	h.componentsList[""] = list
+	h.activeMutex = new(sync.RWMutex)
+	// Will it be okay if neither activeLists slices are initialized?
 	return nil
-	// TODO activeLists
-	// who is updating the lists
-	// what do we do if there is nothing
-	// TODO activeMutex
 }
 
 // GetBase returns the underlying http.Handler
@@ -49,7 +47,7 @@ func (h *AuthHandler) SetBase(handler http.Handler) {
 	h.base = handler
 }
 
-// TODO writerMutex?- possibly conflict if something removes or deletes componentsList?- what if something is recompiling the active list
+// AddInstances adds instances to the default ListTemplate, I don't think this needs a mutex because the one underneath has one
 func (h *AuthHandler) AddInstances(instances ...AuthFuncInstance) error {
 	return h.componentsList[""].AddInstances(instances...)
 }
@@ -59,17 +57,8 @@ func (h *AuthHandler) RemoveInstances(instanceNames ...string) { // TODO writerM
 	h.componentsList[""].RemoveInstances(instanceNames...)
 }
 
-// UpdateHandler is UpdateHandlers for one handler
-func (h *AuthHandler) UpdateHandler(completionNotifier chan int) {
-	lockNeeded := h.startLock() // todo this is for the writerMutex- maybe it should be another TODO
-	if lockNeeded {
-		h.UpdateActiveList()
-		h.endLock()
-	}
-	completionNotifier <- 1
-}
-
-func (h *AuthHandler) AddLists(lists ...AuthFuncListTemplate) error {
+// AddLists add lists
+func (h *AuthHandler) AddLists(lists ...*AuthFuncListTemplate) error {
 	h.componentMutex.Lock()
 	defer h.componentMutex.Unlock()
 	for i, _ := range lists {
@@ -77,12 +66,13 @@ func (h *AuthHandler) AddLists(lists ...AuthFuncListTemplate) error {
 			return errors.Wrap(ErrNameTaken, lists[i].name)
 		}
 		lists[i].AddHandler(h)
-		h.componentsList[lists[i].name] = &lists[i]
+		h.componentsList[lists[i].name] = lists[i]
 		// We need to update our composite now
 	}
 	return nil
 }
 
+// RemoveLists remove lists
 func (h *AuthHandler) RemoveLists(listNames ...string) {
 	h.componentMutex.Lock()
 	defer h.componentMutex.Unlock()
@@ -111,23 +101,27 @@ func (h *AuthHandler) endLock() {
 	h.activeMutex.Unlock()
 }
 
-// UpdateActiveLists is what builds the components into your lists. It needs to be called when a list is updated or added.
-func (h *AuthHandler) UpdateActiveList() error {
+// UpdateHandler is what builds the components into your lists. It needs to be called when a list is updated or added.
+func (h *AuthHandler) UpdateHandler(completionNotifier chan int) error {
+	defer func() {
+		completionNotifier <- 1
+	}()
 	h.componentMutex.Lock()
 	// Not defered unlock because we unlock it sooner
-	componentsListSlice := make([]AuthFuncInstance, len(h.componentsList), len(h.componentsList)*3) // Arbitrary constant to extend capacity
+	componentsListSlice := make([]AuthFuncInstance, len(h.componentsList), len(h.componentsList)*3)
 	for _, i := range h.componentsList {
 		componentsListSlice = append(componentsListSlice, h.componentsList[i.name].AuthFuncListSafe.GetFuncs()...)
 	}
 	h.componentMutex.Unlock()
-	h.activeMutex.Lock()
-	defer h.activeMutex.Unlock()
-	h.activeLists[1-h.currentList] = new(AuthFuncListSafe)
-	err := h.activeLists[1-h.currentList].Init(componentsListSlice...) // why can't i use := here
-	if err != nil {
-		return err
+	if h.startLock() {
+		defer h.endLock()
+		h.activeLists[1-h.currentList] = new(AuthFuncListSafe)
+		err := h.activeLists[1-h.currentList].Init(componentsListSlice...) // why can't i use := here
+		if err != nil {
+			return err
+		}
+		h.currentList = 1 - h.currentList
 	}
-	h.currentList = 1 - h.currentList
 	return nil
 }
 
@@ -144,6 +138,9 @@ func (h *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		defer h.activeMutex.RUnlock()
+		if h.activeLists[currentList] == nil {
+			return
+		}
 		ret, err := h.activeLists[currentList].CallAll(w, r)
 		if err != nil {
 			return

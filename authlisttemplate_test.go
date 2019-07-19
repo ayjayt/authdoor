@@ -69,6 +69,24 @@ func TestAuthFuncListTemplateRemoveHandler(t *testing.T) {
 }
 
 // It would be better I guess if AuthFuncListTemplate handlers took an interface, that if the interface defined most of what was needed to access the data strucutre. Then I could test with mocks. It tests still need to sometimes access things that wont be exposed by the interface. Either way, I will rewrite this once UpdateHandler is done.
+
+// TestAuthFuncListUpdateHandler will test the UpdateHandler() method
+func TestAuthFuncListTemplateUpdateHandler(t *testing.T) {
+	instances, _ := makeInstances(t, sortableInstances)
+	list := new(AuthFuncListTemplate)
+	list.Init("test", instances...)
+	handler := new(AuthHandler)
+	handler.Init(nil)
+	handler2 := new(AuthHandler)
+	handler2.Init(nil)
+	list.AddHandler(handler)
+	list.AddHandler(handler2)
+	ch, total := list.UpdateHandlers()
+	require.Equal(t, 2, total)
+	require.IsType(t, ch, make(chan int, 2))
+	list.BlockForUpdate(ch, total)
+}
+
 // Test UpdateHandler
 // Test BlockForUpdate
 
