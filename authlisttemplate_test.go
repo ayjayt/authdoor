@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestAuthFuncListSafeInit tests the Init() method
+// TestAuthFuncListTemplateInit tests the Init() method
 func TestAuthFuncListTemplateInit(t *testing.T) {
 	instances, _ := makeInstances(t, sortableInstances)
 	list := new(AuthFuncListTemplate)
@@ -24,8 +24,8 @@ func TestAuthFuncListTemplateInit(t *testing.T) {
 	}
 }
 
-// TestAuthFuncListTemplateAddHandlers will test the AddHandler() method
-func TestAuthFuncListTemplateAddHandlers(t *testing.T) {
+// TestAuthFuncListTemplateAddHandler will test the AddHandler() method
+func TestAuthFuncListTemplateAddHandler(t *testing.T) {
 	instances, _ := makeInstances(t, sortableInstances)
 	list := new(AuthFuncListTemplate)
 	list.Init("test", instances...)
@@ -70,7 +70,7 @@ func TestAuthFuncListTemplateRemoveHandler(t *testing.T) {
 
 // It would be better I guess if AuthFuncListTemplate handlers took an interface, that if the interface defined most of what was needed to access the data strucutre. Then I could test with mocks. It tests still need to sometimes access things that wont be exposed by the interface. Either way, I will rewrite this once UpdateHandler is done.
 
-// TestAuthFuncListUpdateHandler will test the UpdateHandler() method
+// TestAuthFuncListTemplateUpdateHandler will test the UpdateHandler() method as well as the BlockForUpdate() handler.
 func TestAuthFuncListTemplateUpdateHandler(t *testing.T) {
 	instances, _ := makeInstances(t, sortableInstances)
 	list := new(AuthFuncListTemplate)
@@ -87,10 +87,7 @@ func TestAuthFuncListTemplateUpdateHandler(t *testing.T) {
 	list.BlockForUpdate(ch, total)
 }
 
-// Test UpdateHandler
-// Test BlockForUpdate
-
-// BenchmarkAuthFuncListSafeInit will benchmark the Init() method
+// BenchmarkAuthFuncListTemplateInit will benchmark the Init() method
 func BenchmarkAuthFuncListTemplateInit(b *testing.B) {
 	instances, _ := makeInstances(b, sortableInstances)
 	b.ResetTimer()
@@ -102,7 +99,7 @@ func BenchmarkAuthFuncListTemplateInit(b *testing.B) {
 	})
 }
 
-// BenchmarkAuthFuncListSafeAddRemoveInstance will benchmark the AddRemove() method
+// BenchmarkAuthFuncListTemplateAddRemoveInstance will benchmark the AddRemove() method
 func BenchmarkAuthFuncListTemplateAddRemoveHandler(b *testing.B) {
 	if testing.Verbose() {
 		b.Logf("This test adds and removes the same instance because of practical constrains")
