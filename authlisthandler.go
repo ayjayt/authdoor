@@ -6,11 +6,7 @@ import (
 	"sync"
 )
 
-// handlerMutex is when you're RW's a template's handler list or using it
-// listMutex is when you're updating the actual list
-// writerMutex is when you're actually changing a handler's activeList or componentList (these would basically happen at the same time, unless you're updating the activeList after updating an actual list)
-
-// AuthHandler is an http.Handler wrapper that manages its authorization options
+// AuthHandler is an http.Handler wrapper that manages its authorization options, and provides a double-buffered RW-race-safe structure heavily biased towards reads.
 type AuthHandler struct {
 	base           http.Handler
 	activeLists    [2]*AuthFuncListSafe // the lists actually being used
@@ -19,10 +15,20 @@ type AuthHandler struct {
 	currentList    int                              // for directing readers
 	componentMutex *sync.Mutex                      // for writing
 	componentsList map[string]*AuthFuncListTemplate // for default and external lists
+	logger         LoggerInterface
 }
 
-// Init sets the base http.Handler and initializes some variables
+// SetLogger sets a custom logger for this handler
+func (h *AuthHandler) SetLogger(newLogger LoggerInterface) {
+	logger = newLogger
+}
+
+// Init sets the base http.Handler and initializes all members that need to be- maps, slices, and pointers to sync primitives.
 func (h *AuthHandler) Init(handler http.Handler) error {
+	if logger == nil {
+		logger = defaultLogger
+	}
+	h.logger.Info("Initializing a new handler")
 	h.base = handler
 	h.componentMutex = new(sync.Mutex)
 	h.componentsList = make(map[string]*AuthFuncListTemplate, 1)
@@ -42,7 +48,7 @@ func (h *AuthHandler) GetBase() http.Handler {
 	return h.base
 }
 
-// GetBase sets the underlying http.Handler
+// SetBase sets the underlying http.Handler
 func (h *AuthHandler) SetBase(handler http.Handler) {
 	h.base = handler
 }
@@ -52,12 +58,12 @@ func (h *AuthHandler) AddInstances(instances ...AuthFuncInstance) error {
 	return h.componentsList[""].AddInstances(instances...)
 }
 
-// RemoveInstances ... TODO
+// RemoveInstances removes instances from the underlying default ListTemplate
 func (h *AuthHandler) RemoveInstances(instanceNames ...string) { // TODO writerMutex?
 	h.componentsList[""].RemoveInstances(instanceNames...)
 }
 
-// AddLists add lists
+// AddLists add ListTemplates to handler's list of temoplates. You must call UpdateHandler manually after this.
 func (h *AuthHandler) AddLists(lists ...*AuthFuncListTemplate) error {
 	h.componentMutex.Lock()
 	defer h.componentMutex.Unlock()
@@ -67,12 +73,11 @@ func (h *AuthHandler) AddLists(lists ...*AuthFuncListTemplate) error {
 		}
 		lists[i].AddHandler(h)
 		h.componentsList[lists[i].name] = lists[i]
-		// We need to update our composite now
 	}
 	return nil
 }
 
-// RemoveLists remove lists
+// RemoveLists removes added to the component list by name.
 func (h *AuthHandler) RemoveLists(listNames ...string) {
 	h.componentMutex.Lock()
 	defer h.componentMutex.Unlock()
@@ -91,7 +96,7 @@ func (h *AuthHandler) startLock() bool {
 		return false
 	}
 	h.toUpdate = false
-	// corner condition race case
+	// NOTE: corner condition race case where we could have false updates
 	// i'd like to explore it more
 	return true
 }
@@ -125,9 +130,9 @@ func (h *AuthHandler) UpdateHandler(completionNotifier chan int) error {
 	return nil
 }
 
+// ServeHTTP is the handler function that wraps the base ServeHTTP, while calling the authorization functions.
 func (h *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// TODO: CORS- see AuthHandler todo0 we should have like a preflight function we can assign
-	// TODO: awful structure
+	// TODO: Set CORS here or force it elsewhere?
 	currentList := -1
 	for currentList != h.currentList {
 		currentList := h.currentList
@@ -146,9 +151,10 @@ func (h *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if (ret.Auth == AuthGranted) || (ret.Resp == Ignored) {
+			// Set contex here.
 			h.base.ServeHTTP(w, r)
 		}
 		return
 	}
-	return // should never get here eh
+	return
 }

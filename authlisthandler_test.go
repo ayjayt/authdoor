@@ -8,9 +8,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// We can't use http's handlerfuncs as handlers to test because require can't compare funcs
+// emptyHandler is a shim since we must have a non-func to test for quality with the prequire package
 type emptyHandler struct{}
 
+// ServeHTTP is the empty function completing the http.Handler interface for emptyHandler
 func (h *emptyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
@@ -144,12 +145,12 @@ func TestAuthHandlerRemoveLists(t *testing.T) {
 
 }
 
-// I'm not happy with how unInited structs are handled (ErrNameTaken conflict with ""
+// I'm not happy with how unInited structs are handled (ErrNameTaken conflict with "")
 // I'm not witht he lack of transactionality
 // I feel like this could be more concise and readable
 // There needs to be better logging
 
-// Test UpdateHandler
+// TestAuthHandlerUpdateHandler makes sure that UpdateHandler works and it's notifier works.
 func TestAuthHandlerUpdateHandler(t *testing.T) {
 	notifier := make(chan int, 1) // if not a buffer of one, handler.UpdateHandler must be a goroutine
 	handler := new(AuthHandler)
@@ -162,7 +163,7 @@ func TestAuthHandlerUpdateHandler(t *testing.T) {
 	require.Equal(t, 1, handler.currentList)
 }
 
-// Test ServeHTTP
+// TestAuthHandlerServeHTTP makes sure that the ServeHTTP function works. It has no requires but would throw an error if it didn't work.
 func TestAuthHandlerServeHTTP(t *testing.T) {
 	handler := new(AuthHandler)
 	handler.Init(nil)
@@ -210,7 +211,7 @@ func BenchmarkAuthHandlerAddRemoveLists(b *testing.B) {
 
 }
 
-// Update
+// BenchmarkAuthHandlerUpdateHandler will benchmark update handler in two methods- with buffered channels or with goroutines.
 func BenchmarkAuthHandlerUpdateHandler(b *testing.B) {
 	handler := new(AuthHandler)
 	handler.Init(nil)
@@ -230,6 +231,7 @@ func BenchmarkAuthHandlerUpdateHandler(b *testing.B) {
 	})
 }
 
+// BenchmarkAuthHandlerServeHTTP just benchmarks the ServeHTTP function with no handlers to call.
 func BenchmarkAuthHandlerServeHTTP(b *testing.B) {
 	handler := new(AuthHandler)
 	handler.Init(nil)
