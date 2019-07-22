@@ -20,13 +20,13 @@ type AuthHandler struct {
 
 // SetLogger sets a custom logger for this handler
 func (h *AuthHandler) SetLogger(newLogger LoggerInterface) {
-	logger = newLogger
+	h.logger = newLogger
 }
 
 // Init sets the base http.Handler and initializes all members that need to be- maps, slices, and pointers to sync primitives.
 func (h *AuthHandler) Init(handler http.Handler) error {
-	if logger == nil {
-		logger = defaultLogger
+	if h.logger == nil {
+		h.logger = defaultLogger
 	}
 	h.logger.Info("Initializing a new handler")
 	h.base = handler
@@ -77,7 +77,7 @@ func (h *AuthHandler) AddLists(lists ...*AuthFuncListTemplate) error {
 	return nil
 }
 
-// RemoveLists removes added to the component list by name.
+// RemoveLists removes added to the component list by name. You must call UpdateHnalder manually after this
 func (h *AuthHandler) RemoveLists(listNames ...string) {
 	h.componentMutex.Lock()
 	defer h.componentMutex.Unlock()
@@ -108,12 +108,14 @@ func (h *AuthHandler) endLock() {
 
 // UpdateHandler is what builds the components into your lists. It needs to be called when a list is updated or added.
 func (h *AuthHandler) UpdateHandler(completionNotifier chan int) error {
-	defer func() {
-		completionNotifier <- 1
-	}()
+	if completionNotifier != nil {
+		defer func() {
+			completionNotifier <- 1
+		}()
+	}
 	h.componentMutex.Lock()
 	// Not defered unlock because we unlock it sooner
-	componentsListSlice := make([]AuthFuncInstance, len(h.componentsList), len(h.componentsList)*3)
+	componentsListSlice := make([]AuthFuncInstance, 0, len(h.componentsList)*3)
 	for _, i := range h.componentsList {
 		componentsListSlice = append(componentsListSlice, h.componentsList[i.name].AuthFuncListSafe.GetFuncs()...)
 	}
@@ -152,7 +154,9 @@ func (h *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if (ret.Auth == AuthGranted) || (ret.Resp == Ignored) {
 			// Set contex here.
-			h.base.ServeHTTP(w, r)
+			if h.base != nil {
+				h.base.ServeHTTP(w, r)
+			}
 		}
 		return
 	}

@@ -98,8 +98,10 @@ func TestAuthHandlerAddLists(t *testing.T) {
 func TestAuthHandlerRemoveLists(t *testing.T) {
 	handler := new(AuthHandler)
 	instances, _ := makeInstances(t, sortableInstances)
-	renamedSortables := sortableInstances
-	renamedSortables2 := sortableInstances
+	renamedSortables := make([]testInstancesRaw, len(sortableInstances))
+	renamedSortables2 := make([]testInstancesRaw, len(sortableInstances))
+	copy(renamedSortables, sortableInstances)
+	copy(renamedSortables2, sortableInstances)
 	for i := range sortableInstances {
 		renamedSortables[i].name = renamedSortables[i].name + "2"
 		renamedSortables2[i].name = renamedSortables2[i].name + "3"
@@ -150,7 +152,7 @@ func TestAuthHandlerRemoveLists(t *testing.T) {
 // I feel like this could be more concise and readable
 // There needs to be better logging
 
-// TestAuthHandlerUpdateHandler makes sure that UpdateHandler works and it's notifier works.
+// TestAuthHandlerUpdateHandler makes sure that UpdateHandler works and it's notifier works. This test is pretty weak.
 func TestAuthHandlerUpdateHandler(t *testing.T) {
 	notifier := make(chan int, 1) // if not a buffer of one, handler.UpdateHandler must be a goroutine
 	handler := new(AuthHandler)
@@ -163,19 +165,74 @@ func TestAuthHandlerUpdateHandler(t *testing.T) {
 	require.Equal(t, 1, handler.currentList)
 }
 
-// TestAuthHandlerServeHTTP makes sure that the ServeHTTP function works. It has no requires but would throw an error if it didn't work.
+// TestAuthHandlerServeHTTP makes sure that the ServeHTTP function works. It has no requires but would throw an error if it didn't work. This test is pretty weak.
 func TestAuthHandlerServeHTTP(t *testing.T) {
 	handler := new(AuthHandler)
 	handler.Init(nil)
 	handler.ServeHTTP(nil, nil) // cool
 }
 
-// This is an integration test
-// we should build it up and provide a mock
-// creating an instance
-// giving that instance a mock
-// calling it
-// integrationtest
+// TestIntegration tests as many functions of the library as possible.
+func TestIntegration(t *testing.T) {
+	var err error
+	renamedSortables := make([]testInstancesRaw, len(sortableInstances))
+	copy(renamedSortables, sortableInstances)
+	for i := range sortableInstances {
+		renamedSortables[i].expRet.Auth = AuthFailed
+		renamedSortables[i].expRet.Resp = Ignored
+	}
+	renamedSortables2 := make([]testInstancesRaw, len(sortableInstances))
+	renamedSortables3 := make([]testInstancesRaw, len(sortableInstances))
+	copy(renamedSortables2, renamedSortables)
+	copy(renamedSortables3, renamedSortables)
+	for i := range sortableInstances {
+		renamedSortables2[i].name = renamedSortables2[i].name + "2"
+		renamedSortables3[i].name = renamedSortables3[i].name + "3"
+	}
+	instances, mocks := makeInstances(t, renamedSortables)
+	instances2, mocks2 := makeInstances(t, renamedSortables2)
+	instances3, mocks3 := makeInstances(t, renamedSortables3)
+
+	template := new(AuthFuncListTemplate)
+	err = template.Init("template", instances2...)
+	require.Nil(t, err)
+	template2 := new(AuthFuncListTemplate)
+	err = template2.Init("template2", instances3...)
+	require.Nil(t, err)
+
+	handler := new(AuthHandler)
+	handler2 := new(AuthHandler)
+
+	err = handler.Init(nil)
+	require.Nil(t, err)
+	err = handler2.Init(nil)
+	require.Nil(t, err)
+	// TODO: Init the handler to check if it can be called
+	// TODO: Change one of the items on the list so that it _is_ called
+	// TODO: take the every permutation list and loop through this test whith each item. We will know whether or not the func should be called.
+
+	handler.AddLists(template)
+	handler2.AddLists(template2)
+	handler.AddInstances(instances...)
+	t.Logf("Number of instances: %v size of template: %v", len(instances), len(template.funcList))
+	handler.UpdateHandler(nil)
+	handler2.UpdateHandler(nil)
+	currentItems := handler.activeLists[handler.currentList].ListInstances()
+	t.Logf("%+v\n", currentItems)
+	handler.ServeHTTP(nil, nil)
+	handler2.ServeHTTP(nil, nil)
+	// TODO Can we change lists?
+	// TODO Can we remove lists?
+	for i := range mocks {
+		mocks[i].RequireCalled(t)
+
+		mocks2[i].RequireCalled(t)
+		mocks3[i].RequireCalled(t)
+	}
+	_ = mocks
+	_ = mocks2
+	_ = mocks3
+}
 
 // BenchmarkAuthHandlerInit will test the Init function to determine how long it takes
 func BenchmarkAuthHandlerInit(b *testing.B) {
