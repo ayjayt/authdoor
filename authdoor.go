@@ -1,3 +1,7 @@
+/*
+Package authdoor provides a race-safe ordered index-map of functions called by an http.Handler
+implementation to be used as authorization functions.
+*/
 package authdoor
 
 import ()
