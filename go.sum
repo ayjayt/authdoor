@@ -1,3 +1,5 @@
+github.com/ayjayt/ilog v0.0.0-20190723193223-ae1d18ab078a h1:L/I7Qqpfszi8Jq58JUVYg5KpjcJjK57DMYypx3+sOwU=
+github.com/ayjayt/ilog v0.0.0-20190723193223-ae1d18ab078a/go.mod h1:NXhVB+mkbUyvITtPgbwyZNjcb7p2qd/WRYK6KaJ87UU=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=

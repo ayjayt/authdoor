@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/ayjayt/ilog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -148,14 +149,14 @@ func blankAuthFunc(w http.ResponseWriter, r *http.Request) (AuthFuncReturn, erro
 func BenchmarkAuthFuncInstanceInit(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		dut := new(AuthFuncInstance)
-		dut.Init("benchmark", blankAuthFunc, 0, &EmptyLogger{})
+		dut.Init("benchmark", blankAuthFunc, 0, &ilog.EmptyLogger{})
 	}
 }
 
 // BenchmarkAuthFuncInstanceCall tests how fast and efficiently we call the authfunc member of the struct
 func BenchmarkAuthFuncInstanceCall(b *testing.B) {
 	dut := new(AuthFuncInstance)
-	dut.Init("benchmark", blankAuthFunc, 0, &EmptyLogger{})
+	dut.Init("benchmark", blankAuthFunc, 0, &ilog.EmptyLogger{})
 	for i := 0; i < b.N; i++ {
 		dut.call(nil, nil)
 	}

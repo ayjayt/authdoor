@@ -6,6 +6,8 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
+
+	"github.com/ayjayt/ilog"
 )
 
 var (
@@ -17,7 +19,7 @@ var (
 type AuthFuncList struct {
 	funcList []AuthFuncInstance // these are copied, and this needs to be reordered
 	funcMap  map[string]int     // cornelk/hashmap would be faster
-	logger   LoggerInterface
+	logger   ilog.LoggerInterface
 }
 
 // ListInstance returns a slice of AuthFuncList's instance names
@@ -30,7 +32,7 @@ func (l *AuthFuncList) ListInstances() []string {
 }
 
 // SetLogger sets the default logger for an AuthFuncList
-func (l *AuthFuncList) SetLogger(logger LoggerInterface) {
+func (l *AuthFuncList) SetLogger(logger ilog.LoggerInterface) {
 	l.logger = logger
 }
 

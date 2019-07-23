@@ -4,6 +4,8 @@ import (
 	"github.com/pkg/errors"
 	"net/http"
 	"sync"
+
+	"github.com/ayjayt/ilog"
 )
 
 // AuthHandler is an http.Handler wrapper that manages its authorization options, and provides a double-buffered RW-race-safe structure heavily biased towards reads.
@@ -15,11 +17,11 @@ type AuthHandler struct {
 	currentList    int                              // for directing readers
 	componentMutex *sync.Mutex                      // for writing
 	componentsList map[string]*AuthFuncListTemplate // for default and external lists
-	logger         LoggerInterface
+	logger         ilog.LoggerInterface
 }
 
 // SetLogger sets a custom logger for this handler
-func (h *AuthHandler) SetLogger(newLogger LoggerInterface) {
+func (h *AuthHandler) SetLogger(newLogger ilog.LoggerInterface) {
 	h.logger = newLogger
 }
 

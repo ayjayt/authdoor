@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+
+	"github.com/ayjayt/ilog"
 )
 
 var (
@@ -97,11 +99,11 @@ type AuthFuncInstance struct {
 	name     string
 	authFunc AuthFunc
 	priority int
-	logger   LoggerInterface
+	logger   ilog.LoggerInterface
 }
 
 // NewAuthFuncInstance takes some AuthFunc and lets you build an instance out of it.
-func (i *AuthFuncInstance) Init(name string, authFunc AuthFunc, priority int, logger LoggerInterface) {
+func (i *AuthFuncInstance) Init(name string, authFunc AuthFunc, priority int, logger ilog.LoggerInterface) {
 	if logger == nil {
 		i.logger = defaultLogger
 	} else {

@@ -4,19 +4,21 @@ implementation to be used as authorization functions.
 */
 package authdoor
 
-import ()
+import (
+	"github.com/ayjayt/ilog"
+)
 
 // defaultLogger is a global default logger makes things a lot easier
-var defaultLogger LoggerInterface
+var defaultLogger ilog.LoggerInterface
 
 func init() {
 	if defaultLogger == nil {
-		defaultLogger = new(EmptyLogger)
+		defaultLogger = new(ilog.EmptyLogger)
 	}
 }
 
 // SetDefaultLogger allows you set a logger like github.com/go-logr/zapr
-func SetDefaultLogger(newLogger LoggerInterface) {
+func SetDefaultLogger(newLogger ilog.LoggerInterface) {
 	defaultLogger = newLogger
 	defaultLogger.Info("Default logger set")
 }
