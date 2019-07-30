@@ -146,19 +146,24 @@ func (h *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			currentList = -1
 			continue
 		}
-		defer h.activeMutex.RUnlock()
-		if h.activeLists[currentList] == nil {
-			return
-		}
-		ret, err := h.activeLists[currentList].CallAll(w, r)
-		if err != nil {
-			return
-		}
-		if (ret.Auth == AuthGranted) || (ret.Resp == Ignored) {
-			// Set contex here.
-			if h.base != nil {
-				h.base.ServeHTTP(w, r)
+		if h.activeLists[currentList] != nil { // TODO: empty lists forced returns instead of calling, we didn't test of this, why?
+			defer h.activeMutex.RUnlock()
+			ret, err := h.activeLists[currentList].CallAll(w, r)
+			if err != nil {
+				// TODO: log
+				return
 			}
+			if (ret.Auth == AuthGranted) || (ret.Resp == Ignored) {
+				// Set contex here.
+				if h.base != nil {
+					h.base.ServeHTTP(w, r)
+				}
+			}
+			return
+		}
+		h.activeMutex.RUnlock()
+		if h.base != nil {
+			h.base.ServeHTTP(w, r)
 		}
 		return
 	}

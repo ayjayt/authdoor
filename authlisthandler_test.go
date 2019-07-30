@@ -172,6 +172,9 @@ func TestAuthHandlerServeHTTP(t *testing.T) {
 	handler.ServeHTTP(nil, nil) // cool
 }
 
+// TODO: test nil and not nil handlers
+// TODO: test nil and not nil templatelists
+
 // TestIntegration tests as many functions of the library as possible.
 func TestIntegration(t *testing.T) {
 	var err error
