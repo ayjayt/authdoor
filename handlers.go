@@ -11,6 +11,9 @@ type redirectSchemeHandler struct {
 
 func (rsh *redirectSchemeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	newURL := r.URL
+	if r.URL.IsAbs() == false {
+		r.URL.Host = r.Host
+	}
 	newURL.Scheme = rsh.scheme
 	http.Redirect(w, r, newURL.String(), rsh.code)
 }

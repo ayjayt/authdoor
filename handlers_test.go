@@ -22,7 +22,7 @@ func TestRedirectSchemeHandler(t *testing.T) {
 	require.Equal(t, http.StatusMovedPermanently, responseRecorder.Code)
 	require.Equal(t, []string{"https:///"}, responseRecorder.Header()[http.CanonicalHeaderKey("location")])
 
-	req2, err := http.NewRequest("GET", "http:///", nil)
+	req2, err := http.NewRequest("GET", "http://ajpikul.com/thing", nil)
 	t.Logf("URL: %v", req2.URL.String())
 	if err != nil {
 		t.Fatal(err)
@@ -30,5 +30,6 @@ func TestRedirectSchemeHandler(t *testing.T) {
 	responseRecorder2 := httptest.NewRecorder()
 	dut.ServeHTTP(responseRecorder2, req2)
 	require.Equal(t, http.StatusMovedPermanently, responseRecorder2.Code)
-	require.Equal(t, []string{"https:///"}, responseRecorder2.Header()[http.CanonicalHeaderKey("location")])
+	require.Equal(t, []string{"https://ajpikul.com/thing"}, responseRecorder2.Header()[http.CanonicalHeaderKey("location")])
+	t.Logf("New URL: %+v", responseRecorder2.Header())
 }
