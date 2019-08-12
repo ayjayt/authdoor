@@ -1,0 +1,7 @@
+a proxy would point from a path to a certain handler
+it would probably pass the whole path that was originally called
+although you may need to transform or strip some prefix
+
+a file server takes the whole path and looks for it at the root, the host is already stripped, you can strip some beginning part of the path too with strep prefix
+
+so now we have fileservers and proxies
