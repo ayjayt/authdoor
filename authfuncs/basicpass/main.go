@@ -20,6 +20,7 @@ const (
 	</form>`
 	script1 = `<script type="text/javascript">
 	window.addEventListener('DOMContentLoaded', function(e) {	
+		myUrl = window.location.href
 		document.getElementById("submit-`
 	script2 = `").addEventListener('click', function(e) {
 			req = new XMLHttpRequest()
@@ -31,7 +32,7 @@ const (
 				alert("received back")
 				location.reload()		
 			})
-			req.open("POST", window.location.href)
+			req.open("POST", myUrl)
 			alert("Sending")
 			req.send(new FormData(document.getElementById("form-`
 	script3 = `")))
