@@ -1,3 +1,6 @@
+github.com/ayjayt/authdoor v0.0.0-20190812181300-f48191f16023/go.mod h1:qT3EDFGhMZFDLpk1pORy3WOFQbO5gKYmMjIqkf3BbD0=
+github.com/ayjayt/authdoor/authfuncs/basicpass v0.0.0-20190812183002-55ab6549016b h1:3vrVg1pk1wcFXLzNVKcYFq20TtktKOwlc3ArybEq5aw=
+github.com/ayjayt/authdoor/authfuncs/basicpass v0.0.0-20190812183002-55ab6549016b/go.mod h1:SkPdD42wW7xp0H6OgtvnrkrXPOsRJEVbHpxYkZfeYos=
 github.com/ayjayt/ilog v0.0.0-20190723193223-ae1d18ab078a h1:L/I7Qqpfszi8Jq58JUVYg5KpjcJjK57DMYypx3+sOwU=
 github.com/ayjayt/ilog v0.0.0-20190723193223-ae1d18ab078a/go.mod h1:NXhVB+mkbUyvITtPgbwyZNjcb7p2qd/WRYK6KaJ87UU=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
