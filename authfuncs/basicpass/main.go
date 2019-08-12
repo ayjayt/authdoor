@@ -15,6 +15,7 @@ const (
 	form3 = `">Submit</button>
 </form>`
 	script1 = `<script type="text/javascript">
+alert("in script")
 	window.addEventListener('DOMContentLoaded', function(e) {	
 	alert("adding")
 		document.getElementById("submit-`
