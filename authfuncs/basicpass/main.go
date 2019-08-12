@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	form1 = `<form>
+	form1 = `<html><body><form>
 	<input id="form-`
 	form2 = `" type=password />
 	<button id="submit-`
@@ -31,7 +31,7 @@ const (
 	script3 = `:"+document.getElementById("form-`
 	script4 = `"),value)
 	}
-</script>`
+</script></body></html>`
 )
 
 // BasicPass supplies an authfunc receiver and stores information to be used by that receiver
