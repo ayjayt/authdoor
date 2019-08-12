@@ -15,21 +15,23 @@ const (
 	form3 = `">Submit</button>
 </form>`
 	script1 = `<script type="text/javascript">
-	document.getElementById("submit-`
+	window.AddEventListener('DOMContentLoaded', function(e) {	
+		document.getElementById("submit-`
 	script2 = `").onclick = function(e) {
-		req = new XMLHttpRequest()
-		req.timeout = 1200
-		req.onerror = function() {
-			alert("an error occured")
-		}
-		req.addEventListener("load", function() {
-			location.reload()		
-		})
-		req.open("POST", window.location.href)
-		// post body
-		req.send("basicpass-`
+			req = new XMLHttpRequest()
+			req.timeout = 1200
+			req.onerror = function() {
+				alert("an error occured")
+			}
+			req.addEventListener("load", function() {
+				location.reload()		
+			})
+			req.open("POST", window.location.href)
+			// post body
+			req.send("basicpass-`
 	script3 = `:"+document.getElementById("form-`
 	script4 = `"),value)
+		}
 	}
 </script></body></html>`
 )
