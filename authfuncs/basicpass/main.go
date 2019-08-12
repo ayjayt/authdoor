@@ -53,6 +53,8 @@ func New(password string) BasicPass {
 
 // Check is an authfunc that determines whether or a user is authenticated or helps them authenticate
 func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.AuthFuncReturn, error) {
+	fmt.Printf("Body:%v\n", r.Body)
+	fmt.Printf("Method:%v\n", r.Method)
 	failure := authdoor.AuthFuncReturn{
 		Auth: authdoor.AuthFailed,
 		Resp: authdoor.Answered,
@@ -64,7 +66,6 @@ func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.Auth
 		Info: authdoor.InstanceReturnInfo{},
 	}
 	if r.Method == "POST" {
-		fmt.Printf("Body:%v\n", r.Body)
 		// if correct
 		sess := uuid.New().String()
 		http.SetCookie(w, &http.Cookie{
