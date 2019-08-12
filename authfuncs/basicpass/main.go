@@ -11,11 +11,11 @@ type BasicPass struct {
 }
 
 func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.AuthFuncReturn, error) {
-	ret = &authdoor.AuthFuncReturn{
-		Auth: AuthFailed,
-		Resp: Answered,
+	ret := &authdoor.AuthFuncReturn{
+		Auth: authdoor.AuthFailed,
+		Resp: authdoor.Answered,
 		Info: authdoor.InstanceReturnInfo{},
 	}
-	w.Write("this")
-	return ret
+	w.Write([]byte("this"))
+	return ret, nil
 }
