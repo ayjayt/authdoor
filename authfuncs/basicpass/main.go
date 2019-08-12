@@ -16,9 +16,10 @@ const (
 	form3 = `">Submit</button>
 </form>`
 	script1 = `<script type="text/javascript">
-	alert("in script")/*
+	alert("in script")
 	window.addEventListener('DOMContentLoaded', function(e) {	
 	alert("adding")
+	/*
 		document.getElementById("submit-`
 	script2 = `").addEventListener('click', function(e) {
 			req = new XMLHttpRequest()
@@ -36,8 +37,8 @@ const (
 	script3 = `:"+document.getElementById("form-`
 	script4 = `"),value)
 			return false;
-		}
-	}*/
+		}*/
+	}
 </script></body></html>`
 )
 
