@@ -38,7 +38,7 @@ const (
 	script4 = `"),value)
 			return false;
 		}*/
-	}
+	})
 </script></body></html>`
 )
 
