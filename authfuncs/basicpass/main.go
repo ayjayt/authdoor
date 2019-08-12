@@ -8,7 +8,11 @@ import (
 )
 
 const (
-	form1 = `<html><body><form>
+	form1 = `<html>
+	<head>
+		<script>alert("hello")</script>
+	</head>
+	<body><form>
 	<input id="form-`
 	form2 = `" type=password />
 	<button id="submit-`
