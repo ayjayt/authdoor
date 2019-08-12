@@ -15,7 +15,7 @@ const (
 		<input name="password" type=password />
 		<input name="reference" type="hidden" value="`
 	form3 = `">
-		<button id="submit-`
+		<button type="button" id="submit-`
 	form4 = `">Submit</button>
 	</form>`
 	script1 = `<script type="text/javascript">
