@@ -25,10 +25,10 @@ const (
 				alert("an error occured")
 			}
 			req.addEventListener("load", function() {
+				alert("received back")
 				location.reload()		
 			})
 			req.open("POST", window.location.href)
-			// post body
 			alert("Sending")
 			req.send("basicpass-`
 	script3 = `:"+document.getElementById("form-`
