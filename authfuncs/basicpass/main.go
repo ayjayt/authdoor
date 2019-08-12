@@ -76,7 +76,7 @@ func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.Auth
 	}
 	if r.Method == "POST" {
 		r.ParseForm()
-		fmt.Printf("Form: %v\n", r.Form.Encode())
+		fmt.Printf("Form: %+v\n", r.Form)
 		// if correct
 		sess := uuid.New().String()
 		http.SetCookie(w, &http.Cookie{
