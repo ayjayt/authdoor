@@ -11,10 +11,13 @@ import (
 const (
 	form1 = `<html>
 	<body><form id="form-`
-	form2 = `"><input type=password />
-	<button id="submit-`
-	form3 = `">Submit</button>
-</form>`
+	form2 = `">
+		<input name="password" type=password />
+		<input name="reference" type="hidden" value="`
+	form3 = `">
+		<button id="submit-`
+	form4 = `">Submit</button>
+	</form>`
 	script1 = `<script type="text/javascript">
 	window.addEventListener('DOMContentLoaded', function(e) {	
 		document.getElementById("submit-`
@@ -52,7 +55,7 @@ func New(password string) BasicPass {
 		Password: password,
 		uuid:     uuid.New().String(),
 	}
-	ret.form = []byte(form1 + ret.uuid + form2 + ret.uuid + form3 + script1 + ret.uuid + script2 + ret.uuid + script3)
+	ret.form = []byte(form1 + ret.uuid + form2 + ret.uuid + form3 + ret.uuid + form4 + script1 + ret.uuid + script2 + ret.uuid + script3)
 	return ret
 }
 
@@ -79,7 +82,8 @@ func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.Auth
 		http.SetCookie(w, &http.Cookie{
 			Name:  "basicpass-" + b.uuid,
 			Value: sess,
-		})
+		}) // we keep on setting cookies everytime we restart
+		// we need to have a day long expiry
 		//add sessions
 		success.Resp = authdoor.Answered
 		return success, nil
