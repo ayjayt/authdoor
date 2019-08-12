@@ -9,17 +9,14 @@ import (
 
 const (
 	form1 = `<html>
-	<head>
-		<script>alert("hello")</script>
-	</head>
 	<body><form>
 	<input id="form-`
 	form2 = `" type=password />
 	<button id="submit-`
 	form3 = `">Submit</button>
 </form>`
-	script1 = `<script type="text/javascript">
-alert("in script")
+	script1 = `<script>
+	alert("in script")/*
 	window.addEventListener('DOMContentLoaded', function(e) {	
 	alert("adding")
 		document.getElementById("submit-`
@@ -40,7 +37,7 @@ alert("in script")
 	script4 = `"),value)
 			return false;
 		}
-	}
+	}*/
 </script></body></html>`
 )
 
