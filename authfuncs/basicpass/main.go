@@ -7,7 +7,7 @@ import (
 )
 
 type BasicPass struct {
-	password string
+	Password string
 }
 
 func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.AuthFuncReturn, error) {
