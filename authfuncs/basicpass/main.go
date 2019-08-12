@@ -1,10 +1,10 @@
 package basicpass
 
 import (
-	"net/http"
-
+	"fmt"
 	"github.com/ayjayt/authdoor"
 	"github.com/google/uuid"
+	"net/http"
 )
 
 const (
@@ -58,15 +58,26 @@ func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.Auth
 		Resp: authdoor.Answered,
 		Info: authdoor.InstanceReturnInfo{},
 	}
-	if r.Method != "POST" {
-		w.Write(b.form)
-		w.Write([]byte("\n"))
-		return failure, nil
-	}
 	success := authdoor.AuthFuncReturn{
 		Auth: authdoor.AuthGranted,
 		Resp: authdoor.Ignored,
 		Info: authdoor.InstanceReturnInfo{},
 	}
-	return success, nil
+	if r.Method == "POST" {
+		fmt.Printf("Body:%v\n", r.Body)
+		// if correct
+		sess := uuid.New().String()
+		http.SetCookie(w, &http.Cookie{
+			Name:  "basicpass-" + b.uuid,
+			Value: sess,
+		})
+		//add sessions
+		success.Resp = authdoor.Answered
+		return success, nil
+	}
+	// get cookie
+	// if it exists in hashmap, ok
+	w.Write(b.form)
+	w.Write([]byte("\n"))
+	return failure, nil
 }
