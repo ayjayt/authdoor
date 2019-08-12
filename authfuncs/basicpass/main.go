@@ -9,9 +9,8 @@ import (
 
 const (
 	form1 = `<html>
-	<body><form>
-	<input id="form-`
-	form2 = `" type=password />
+	<body><form id="form-`
+	form2 = `"><input type=password />
 	<button id="submit-`
 	form3 = `">Submit</button>
 </form>`
@@ -30,9 +29,8 @@ const (
 			})
 			req.open("POST", window.location.href)
 			alert("Sending")
-			req.send("basicpass-`
-	script3 = `:"+document.getElementById("form-`
-	script4 = `").value)
+			req.send(new FormData(document.getElementById("form-`
+	script3 = `")))
 			e.StopPropogation()
 			return false;
 		})
@@ -53,7 +51,7 @@ func New(password string) BasicPass {
 		Password: password,
 		uuid:     uuid.New().String(),
 	}
-	ret.form = []byte(form1 + ret.uuid + form2 + ret.uuid + form3 + script1 + ret.uuid + script2 + ret.uuid + script3 + ret.uuid + script4)
+	ret.form = []byte(form1 + ret.uuid + form2 + ret.uuid + form3 + script1 + ret.uuid + script2 + ret.uuid + script3)
 	return ret
 }
 
