@@ -33,6 +33,7 @@ const (
 			req.send("basicpass-`
 	script3 = `:"+document.getElementById("form-`
 	script4 = `"),value)
+			e.StopPropogation()
 			return false;
 		})
 	})
