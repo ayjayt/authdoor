@@ -5,6 +5,7 @@ import (
 	"github.com/ayjayt/authdoor"
 	"github.com/google/uuid"
 	"net/http"
+	"net/http/httputil"
 )
 
 const (
@@ -57,7 +58,8 @@ func New(password string) BasicPass {
 
 // Check is an authfunc that determines whether or a user is authenticated or helps them authenticate
 func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.AuthFuncReturn, error) {
-	fmt.Printf("Body:%v\n", r.Body)
+	dump, _ := httputil.DumpRequest(r, true)
+	fmt.Printf("Body:%v\n", string(dump))
 	fmt.Printf("Method:%v\n", r.Method)
 	failure := authdoor.AuthFuncReturn{
 		Auth: authdoor.AuthFailed,
