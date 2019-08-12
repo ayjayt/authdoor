@@ -31,6 +31,7 @@ const (
 			req.send("basicpass-`
 	script3 = `:"+document.getElementById("form-`
 	script4 = `"),value)
+			return false
 		}
 	}
 </script></body></html>`
