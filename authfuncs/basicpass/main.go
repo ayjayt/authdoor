@@ -15,9 +15,10 @@ const (
 	form3 = `">Submit</button>
 </form>`
 	script1 = `<script type="text/javascript">
-	window.AddEventListener('DOMContentLoaded', function(e) {	
+	window.addEventListener('DOMContentLoaded', function(e) {	
+	alert("adding")
 		document.getElementById("submit-`
-	script2 = `").onclick = function(e) {
+	script2 = `").addEventListener('click', function(e) {
 			req = new XMLHttpRequest()
 			req.timeout = 1200
 			req.onerror = function() {
@@ -28,10 +29,11 @@ const (
 			})
 			req.open("POST", window.location.href)
 			// post body
+			alert("Sending")
 			req.send("basicpass-`
 	script3 = `:"+document.getElementById("form-`
 	script4 = `"),value)
-			return false
+			return false;
 		}
 	}
 </script></body></html>`
