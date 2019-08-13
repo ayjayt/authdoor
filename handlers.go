@@ -2,6 +2,8 @@ package authdoor
 
 import (
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 )
 
 type redirectSchemeHandler struct {
@@ -27,7 +29,7 @@ type ReverseProxy struct {
 }
 
 func NewSingleHostReverseProxy(target string) (*ReverseProxy, error) {
-	targetURL, err := url.Parse(targetURL)
+	targetURL, err := url.Parse(target)
 	if err != nil {
 		return nil, err
 	}
