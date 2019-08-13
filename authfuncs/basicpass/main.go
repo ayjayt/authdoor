@@ -2,10 +2,13 @@ package basicpass
 
 import (
 	"fmt"
-	"github.com/ayjayt/authdoor"
-	"github.com/google/uuid"
 	"net/http"
 	"net/http/httputil"
+	"time"
+
+	"github.com/ayjayt/authdoor"
+	"github.com/cornelk/hashmap"
+	"github.com/google/uuid"
 )
 
 const (
@@ -29,11 +32,9 @@ const (
 				alert("an error occured")
 			}
 			req.addEventListener("load", function() {
-				alert("received back")
 				location.reload()		
 			})
 			req.open("POST", myUrl)
-			alert("Sending")
 			req.send(new FormData(document.getElementById("form-`
 	script3 = `")))
 			e.StopPropogation()
@@ -48,6 +49,7 @@ type BasicPass struct {
 	Password string
 	uuid     string
 	form     []byte
+	sessions *hashmap.HashMap
 }
 
 // New returns a new BasicPass
@@ -55,6 +57,7 @@ func New(password string) BasicPass {
 	ret := BasicPass{
 		Password: password,
 		uuid:     uuid.New().String(),
+		sessions: &hashmap.HashMap{},
 	}
 	ret.form = []byte(form1 + ret.uuid + form2 + ret.uuid + form3 + ret.uuid + form4 + script1 + ret.uuid + script2 + ret.uuid + script3)
 	return ret
@@ -83,9 +86,9 @@ func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.Auth
 			http.SetCookie(w, &http.Cookie{
 				Name:  "basicpass-" + b.uuid,
 				Value: sess,
-			}) // we keep on setting cookies everytime we restart
-			// we need to have a day long expiry
-			//add sessions
+			})
+
+			b.sessions.Set(sess, time.Now().Add(time.Hour*6))
 			success.Resp = authdoor.Answered
 			return success, nil
 		} else {
