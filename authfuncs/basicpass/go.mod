@@ -3,7 +3,7 @@ module github.com/ayjayt/authdoor/authfuncs/basicpass
 go 1.12
 
 require (
-	github.com/ayjayt/authdoor v0.0.0-20190812230251-5919adbad11d
+	github.com/ayjayt/authdoor v0.0.0-20190812235613-c8cc8483cd77
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/jessevdk/go-flags v1.4.0 // indirect
