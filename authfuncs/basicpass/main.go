@@ -82,7 +82,7 @@ func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.Auth
 	cookie, err := r.Cookie("basicpass-" + b.uuid)
 	if err == nil { // Cookies exists
 		fmt.Printf("Cookie exists\n")
-		sessionTimeIface, ok := b.sessions.Get(cookie)
+		sessionTimeIface, ok := b.sessions.Get(cookie.Value)
 		if ok { // Found session
 			sessionTime := sessionTimeIface.(time.Time)
 			fmt.Printf("Session exists\n")
