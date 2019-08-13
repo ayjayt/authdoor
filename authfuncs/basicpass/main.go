@@ -76,27 +76,27 @@ func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.Auth
 		Info: authdoor.InstanceReturnInfo{},
 	}
 	if r.Method == "POST" {
-		r.ParseForm()
-		fmt.Printf("Form: %+v\n", r.Form)
-		fmt.Printf("Form: %+v\n", r.PostForm)
-		fmt.Printf("Form: %+v\n", r.MultipartForm)
 		r.ParseMultipartForm(256)
-		fmt.Printf("Form: %+v\n", r.Form)
-		fmt.Printf("Form: %+v\n", r.PostForm)
-		fmt.Printf("Form: %+v\n", r.MultipartForm)
-		// if correct
-		sess := uuid.New().String()
-		http.SetCookie(w, &http.Cookie{
-			Name:  "basicpass-" + b.uuid,
-			Value: sess,
-		}) // we keep on setting cookies everytime we restart
-		// we need to have a day long expiry
-		//add sessions
-		success.Resp = authdoor.Answered
-		return success, nil
+		if r.Form["reference"][0] == b.uuid && r.Form["password"][0] == b.Password {
+			fmt.Printf("Password Accepted\n")
+			sess := uuid.New().String()
+			http.SetCookie(w, &http.Cookie{
+				Name:  "basicpass-" + b.uuid,
+				Value: sess,
+			}) // we keep on setting cookies everytime we restart
+			// we need to have a day long expiry
+			//add sessions
+			success.Resp = authdoor.Answered
+			return success, nil
+		} else {
+			fmt.Printf("Password not accepted\n")
+			w.Write([]byte("no\n"))
+			return failure, nil
+		}
 	}
 	// get cookie
 	// if it exists in hashmap, ok
+	fmt.Printf("Wrote login\n")
 	w.Write(b.form)
 	w.Write([]byte("\n"))
 	return failure, nil
