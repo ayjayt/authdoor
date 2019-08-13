@@ -46,6 +46,7 @@ const (
 
 // BasicPass supplies an authfunc receiver and stores information to be used by that receiver
 type BasicPass struct {
+	// Password is the correct password
 	Password string
 	uuid     string
 	form     []byte
@@ -78,6 +79,20 @@ func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.Auth
 		Resp: authdoor.Ignored,
 		Info: authdoor.InstanceReturnInfo{},
 	}
+	cookie, err := r.Cookie("basicpass-" + b.uuid)
+	if err == nil { // Cookies exists
+		fmt.Printf("Cookie exists\n")
+		sessionTimeIface, ok := b.sessions.Get(cookie)
+		if ok { // Found session
+			sessionTime := sessionTimeIface.(time.Time)
+			fmt.Printf("Session exists\n")
+			if time.Now().Before(sessionTime) {
+				fmt.Printf("Authorized\n")
+				b.sessions.Set(cookie, time.Now().Add(time.Hour*6))
+				return success, nil
+			}
+		}
+	}
 	if r.Method == "POST" {
 		r.ParseMultipartForm(256)
 		if r.Form["reference"][0] == b.uuid && r.Form["password"][0] == b.Password {
@@ -97,8 +112,6 @@ func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.Auth
 			return failure, nil
 		}
 	}
-	// get cookie
-	// if it exists in hashmap, ok
 	fmt.Printf("Wrote login\n")
 	w.Write(b.form)
 	w.Write([]byte("\n"))
