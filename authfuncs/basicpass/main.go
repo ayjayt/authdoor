@@ -88,7 +88,7 @@ func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.Auth
 			fmt.Printf("Session exists\n")
 			if time.Now().Before(sessionTime) {
 				fmt.Printf("Authorized\n")
-				b.sessions.Set(cookie, time.Now().Add(time.Hour*6))
+				b.sessions.Set(cookie.Value, time.Now().Add(time.Hour*6))
 				return success, nil
 			}
 		}
