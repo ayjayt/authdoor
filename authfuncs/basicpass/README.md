@@ -4,6 +4,7 @@ basicpass implements a simple plain-text password mechanism with in memory sessi
 
 ## TODO:
 
+* be able to set a common domain for the cookies
 * proper layerinng, especially with HTML
 * different expiry methods
 * grpc
