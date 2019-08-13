@@ -1,9 +1,7 @@
 package basicpass
 
 import (
-	"fmt"
 	"net/http"
-	"net/http/httputil"
 	"time"
 
 	"github.com/ayjayt/authdoor"
@@ -66,9 +64,6 @@ func New(password string) BasicPass {
 
 // Check is an authfunc that determines whether or a user is authenticated or helps them authenticate
 func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.AuthFuncReturn, error) {
-	dump, _ := httputil.DumpRequest(r, true)
-	fmt.Printf("Body:%v\n", string(dump))
-	fmt.Printf("Method:%v\n", r.Method)
 	failure := authdoor.AuthFuncReturn{
 		Auth: authdoor.AuthFailed,
 		Resp: authdoor.Answered,
@@ -81,13 +76,10 @@ func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.Auth
 	}
 	cookie, err := r.Cookie("basicpass-" + b.uuid)
 	if err == nil { // Cookies exists
-		fmt.Printf("Cookie exists\n")
 		sessionTimeIface, ok := b.sessions.Get(cookie.Value)
 		if ok { // Found session
 			sessionTime := sessionTimeIface.(time.Time)
-			fmt.Printf("Session exists\n")
 			if time.Now().Before(sessionTime) {
-				fmt.Printf("Authorized\n")
 				b.sessions.Set(cookie.Value, time.Now().Add(time.Hour*6))
 				return success, nil
 			}
@@ -96,7 +88,6 @@ func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.Auth
 	if r.Method == "POST" {
 		r.ParseMultipartForm(256)
 		if r.Form["reference"][0] == b.uuid && r.Form["password"][0] == b.Password {
-			fmt.Printf("Password Accepted\n")
 			sess := uuid.New().String()
 			http.SetCookie(w, &http.Cookie{
 				Name:  "basicpass-" + b.uuid,
@@ -107,12 +98,10 @@ func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.Auth
 			success.Resp = authdoor.Answered
 			return success, nil
 		} else {
-			fmt.Printf("Password not accepted\n")
 			w.Write([]byte("no\n"))
 			return failure, nil
 		}
 	}
-	fmt.Printf("Wrote login\n")
 	w.Write(b.form)
 	w.Write([]byte("\n"))
 	return failure, nil
