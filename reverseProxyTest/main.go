@@ -18,12 +18,13 @@ func init() {
 
 // DumperHandler just dumps the request before calling the actual handler
 type DumperHandler struct {
+	me string
 	http.Handler
 }
 
 // NewDumper is just a constructor for a dumper handler
-func NewDumper(h http.Handler) http.Handler {
-	return &DumperHandler{Handler: h}
+func NewDumper(h http.Handler, me string) http.Handler {
+	return &DumperHandler{Handler: h, me: me}
 }
 
 // ServeHTTP is the method allowing us to implement http.Handler interface with DumperHandler and also dump the request
@@ -32,6 +33,7 @@ func (dh *DumperHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Printf("Info:\n%q\n", dh.me)
 	fmt.Printf("Dump:\n%q\n", dump)
 	dh.Handler.ServeHTTP(w, r)
 }
@@ -47,9 +49,10 @@ func (oh *OkHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	backend := NewDumper(&OkHandler{})
-	proxy, _ := authdoor.NewSingleHostReverseProxy("localhost:" + *backendPort)
-	proxyWrapped := NewDumper(proxy)
-	go http.ListenAndServe(*backendPort, backend)
-	http.ListenAndServe(*proxyPort, proxyWrapped)
+	backend := NewDumper(&OkHandler{}, "backend")
+	proxy, _ := authdoor.NewSingleHostReverseProxy("http://localhost:" + *backendPort)
+	proxyWrapped := NewDumper(proxy, "proxy")
+	go http.ListenAndServe(":"+*backendPort, backend)
+	http.ListenAndServe(":"+*proxyPort, proxyWrapped)
+	fmt.Printf("Done\n")
 }
