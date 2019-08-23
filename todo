@@ -1,10 +1,11 @@
-we need to fix the html for the basic plaintext auth
-lets make sure we have good logging
 how do we integrate in auth for multiple different logins
-
-
 namespaced authlists?
-
 config and grpc
-
 lets do a little bit better on our numbers
+
+
+okay so what we really want is...
+supporting goth
+then probably wrapping httphandler datastructure to be race safe
+finish writing out tests for all of this
+we need to do load testing with race condition
