@@ -16,14 +16,14 @@ const (
 		<input name="password" type=password />
 		<input name="reference" type="hidden" value="`
 	form3 = `">
-		<button type="button" id="submit-`
+		<button type="submit" id="submit-`
 	form4 = `">Submit</button>
 	</form>`
 	script1 = `<script type="text/javascript">
 	window.addEventListener('DOMContentLoaded', function(e) {	
 		myUrl = window.location.href
-		document.getElementById("submit-`
-	script2 = `").addEventListener('click', function(e) {
+		document.getElementById("form-`
+	script2 = `").addEventListener('submit', function(e) {
 			req = new XMLHttpRequest()
 			req.timeout = 1200
 			req.onerror = function() {
@@ -35,8 +35,7 @@ const (
 			req.open("POST", myUrl)
 			req.send(new FormData(document.getElementById("form-`
 	script3 = `")))
-			e.StopPropogation()
-			return false;
+			e.PreventDefault()
 		})
 	})
 </script></body></html>`
