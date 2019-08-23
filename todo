@@ -1,0 +1,8 @@
+we need to fix the html for the basic plaintext auth
+lets make sure we have good logging
+how do we integrate in auth for multiple different logins
+
+
+namespaced authlists?
+
+config and grpc
