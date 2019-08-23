@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strconv"
 )
 
 // redirectSchemeHandler holds the new scheme (usually HTTPS) and redirect code (30x) to use during redirection
@@ -24,6 +25,7 @@ func (rsh *redirectSchemeHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 
 // RedirectSchemeHandler returns a new http.Handler
 func RedirectSchemeHandler(scheme string, code int) http.Handler {
+	defaultLogger.Info("Creating new scheme redirect to " + scheme + " with code " + strconv.Itoa(code))
 	return &redirectSchemeHandler{scheme, code}
 }
 
@@ -34,6 +36,7 @@ type ReverseProxy struct {
 
 // NewSingleHostReverseProxy is the constructor for the ReverseProxy struct that actually does the work
 func NewSingleHostReverseProxy(target string) (*ReverseProxy, error) {
+	defaultLogger.Info("Creating new single host reverse proxy to " + target)
 	targetURL, err := url.Parse(target)
 	if err != nil {
 		return nil, err
