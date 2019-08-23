@@ -8,3 +8,5 @@ backend: 9011
 proxy: 9010
 
 And you can use a command like:
+
+`curl -X GET http://localhost:9010/whatever/made/up/path`
