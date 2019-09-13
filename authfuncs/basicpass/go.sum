@@ -2,6 +2,8 @@ github.com/ayjayt/authdoor v0.0.0-20190812181300-f48191f16023 h1:4EVBD5HkgA1Ara6
 github.com/ayjayt/authdoor v0.0.0-20190812181300-f48191f16023/go.mod h1:qT3EDFGhMZFDLpk1pORy3WOFQbO5gKYmMjIqkf3BbD0=
 github.com/ayjayt/authdoor v0.0.0-20190913162444-1e934cae1c69 h1:E0H4ozyKFJ/w99xNCeDSkUgZ8hO/EkFveYt18HkkmGM=
 github.com/ayjayt/authdoor v0.0.0-20190913162444-1e934cae1c69/go.mod h1:nrRV/Rj8/6+ZujR3OxWTcqYQ+b0AEOTdm6EDA09RuB8=
+github.com/ayjayt/authdoor v0.0.0-20190913172940-a5930a380c2c h1:zC270kvAvIOWzZb83LlZ/sFHdMpqt0lFqsGe+u8e8lA=
+github.com/ayjayt/authdoor v0.0.0-20190913172940-a5930a380c2c/go.mod h1:4cU1QR6W+JcKUYNTgto9M1bEvHxRd4oArPihnzNvdUc=
 github.com/ayjayt/authdoor/authfuncs/basicpass v0.0.0-20190812183002-55ab6549016b/go.mod h1:SkPdD42wW7xp0H6OgtvnrkrXPOsRJEVbHpxYkZfeYos=
 github.com/ayjayt/ilog v0.0.0-20190723193223-ae1d18ab078a h1:L/I7Qqpfszi8Jq58JUVYg5KpjcJjK57DMYypx3+sOwU=
 github.com/ayjayt/ilog v0.0.0-20190723193223-ae1d18ab078a/go.mod h1:NXhVB+mkbUyvITtPgbwyZNjcb7p2qd/WRYK6KaJ87UU=
