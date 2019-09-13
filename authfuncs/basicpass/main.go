@@ -90,12 +90,13 @@ func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.Auth
 		Info: authdoor.InstanceReturnInfo{},
 	}
 	cookie, err := r.Cookie("basicpass-" + b.uuid)
-	if err == nil { // Cookies exists
+	if err == nil {
 		sessionTimeIface, ok := b.sessions.Get(cookie.Value)
 		if ok { // Found session
 			sessionTime := sessionTimeIface.(time.Time)
 			if time.Now().Before(sessionTime) {
 				b.sessions.Set(cookie.Value, time.Now().Add(time.Hour*6))
+				defaultLogger.Info("cookie basicpass-" + b.uuid + " found and success")
 				return success, nil
 			}
 		}
@@ -111,8 +112,10 @@ func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.Auth
 
 			b.sessions.Set(sess, time.Now().Add(time.Hour*6))
 			success.Resp = authdoor.Answered
+			defaultLogger.Info("cookie basicpass-" + b.uuid + " set as success")
 			return success, nil
 		} else {
+			defaultLogger.Info("cookie basicpass-" + b.uuid + " failure")
 			w.Write([]byte("no\n"))
 			return failure, nil
 		}
