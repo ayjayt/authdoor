@@ -1,6 +1,6 @@
 module github.com/ayjayt/authdoor/authfuncs/basicpass
 
-go 1.12
+go 1.13
 
 require (
 	github.com/ayjayt/authdoor v0.0.0-20190913162444-1e934cae1c69
