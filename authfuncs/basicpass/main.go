@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ayjayt/authdoor"
+	//"github.com/ayjayt/ilog"
 	"github.com/cornelk/hashmap"
 	"github.com/google/uuid"
 )
@@ -28,6 +29,7 @@ const (
 			req.timeout = 1200
 			req.onerror = function() {
 				alert("an error occured")
+				return false
 			}
 			req.addEventListener("load", function() {
 				location.reload()		
@@ -35,7 +37,7 @@ const (
 			req.open("POST", myUrl)
 			req.send(new FormData(document.getElementById("form-`
 	script3 = `")))
-			e.PreventDefault()
+			e.preventDefault()
 		})
 	})
 </script></body></html>`
