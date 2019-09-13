@@ -5,10 +5,24 @@ import (
 	"time"
 
 	"github.com/ayjayt/authdoor"
-	//"github.com/ayjayt/ilog"
+	"github.com/ayjayt/ilog"
 	"github.com/cornelk/hashmap"
 	"github.com/google/uuid"
 )
+
+var defaultLogger ilog.LoggerInterface
+
+func init() {
+	if defaultLogger == nil {
+		defaultLogger = new(ilog.EmptyLogger)
+	}
+}
+
+// SetDefaultLogger allows you set a logger like github.com/go-logr/zapr
+func SetDefaultLogger(newLogger ilog.LoggerInterface) {
+	defaultLogger = newLogger
+	defaultLogger.Info("Default logger set")
+}
 
 const (
 	form1 = `<html>
