@@ -8,8 +8,6 @@ import (
 	"github.com/ayjayt/ilog"
 )
 
-// This test comment is just to provoke gomod into fetching the latest nested module version
-
 // defaultLogger is a global default logger makes things a lot easier
 var defaultLogger ilog.LoggerInterface
 
