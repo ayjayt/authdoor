@@ -108,6 +108,7 @@ func (b *BasicPass) Check(w http.ResponseWriter, r *http.Request) (authdoor.Auth
 			http.SetCookie(w, &http.Cookie{
 				Name:  "basicpass-" + b.uuid,
 				Value: sess,
+				Path:  "/",
 			})
 
 			b.sessions.Set(sess, time.Now().Add(time.Hour*6))
